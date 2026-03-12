@@ -6,7 +6,7 @@ import sys
 try:
     from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
     from langchain_community.document_loaders import PyPDFLoader
-    from langchain_community.vectorstores import FAISS
+    from langchain_community.vectorstores import Chroma
     from langchain.chains.combine_documents import create_stuff_documents_chain
     from langchain.chains.retrieval import create_retrieval_chain
     from langchain_core.prompts import ChatPromptTemplate
@@ -34,7 +34,7 @@ def init_qa_chain(pdf_path):
     
     # 임베딩 및 벡터 저장
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vectorstore = FAISS.from_documents(docs, embeddings)
+    vectorstore = Chroma.from_documents(docs, embeddings)
     
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
     
@@ -64,3 +64,4 @@ if qa_chain:
             st.markdown(response["answer"])
 else:
     st.error(f"'{PDF_FILE}' 파일을 찾을 수 없습니다. GitHub 리포지토리에 파일을 업로드했는지 확인하세요.")
+
