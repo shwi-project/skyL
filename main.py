@@ -17,6 +17,11 @@ RULES_CONTEXT = """
 테스트를 위해 처음엔 한 페이지만 넣어보시는 것도 좋습니다.)
 """
 
+# 사용 가능한 모델 리스트 출력용 (임시 추가)
+for m in genai.list_models():
+    if 'generateContent' in m.supported_generation_methods:
+        st.write(f"사용 가능 모델: {m.name}")
+        
 # 3. 모델 설정 (에러 방지용 세이프가드)
 # 안전 필터 때문에 응답이 거부되는 경우를 방지하기 위해 모든 필터를 끕니다.
 safety_settings = [
@@ -32,7 +37,7 @@ if user_input := st.chat_input("질문하세요"):
     with st.chat_message("assistant"):
         try:
             # 모델 호출 시 안전 설정 적용
-            model = genai.GenerativeModel('gemini-1.5-flash', safety_settings=safety_settings)
+            model = genai.GenerativeModel('gemini-2.0-flash', safety_settings=safety_settings)
             
             # 프롬프트 생성
             prompt = f"다음 관리규약을 바탕으로 답변해줘:\n{RULES_CONTEXT}\n\n질문: {user_input}"
@@ -58,3 +63,4 @@ if user_input := st.chat_input("질문하세요"):
                 st.info("💡 API 사용량이 초과되었습니다. 잠시 후 시도하거나 새 키를 발급받으세요.")
             elif "400" in str(e):
                 st.info("💡 요청 형식이 잘못되었습니다. (텍스트가 너무 길거나 API 설정 오류)")
+
