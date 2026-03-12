@@ -2,17 +2,6 @@ import streamlit as st
 import os
 import subprocess
 import sys
-try:
-    import langchain.chains
-except ModuleNotFoundError:
-    import streamlit as st
-    with st.spinner("서버 환경 강제 복구 중입니다... (약 1분 소요)"):
-        subprocess.check_call([sys.executable, "-m", "pip", "install", 
-                               "langchain", "langchain-community", 
-                               "langchain-google-genai", "pypdf", "faiss-cpu"])
-    st.success("패키지 설치 완료! 페이지를 새로고침 해주세요.")
-    st.stop()
-    
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -94,5 +83,6 @@ if prompt := st.chat_input("예: 층간소음 관리위원회 개최 기준이 �
                 
             except Exception as e:
                 st.error(f"❌ 에러가 발생했습니다: {e}")
+
 
 
