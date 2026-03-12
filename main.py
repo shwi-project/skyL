@@ -1,67 +1,83 @@
 import streamlit as st
-import google.generativeai as genai
 import os
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain.chains import RetrievalQA
 
-# 1. API 키 설정 및 디버깅
+# 1. API 키 설정 (Streamlit Secrets 활용)
 if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 else:
     st.error("🔑 Secrets에 GOOGLE_API_KEY를 등록해주세요.")
     st.stop()
 
-st.title("🏢 관리규약 AI (최종 에러 추적 모드)")
+st.set_page_config(page_title="아파트 규약 AI", page_icon="🏢")
+st.title("🏢 원당역 롯데캐슬스카이엘 규약 봇")
 
-# 2. 규약 텍스트 (텍스트가 너무 길면 잘라서 테스트해보세요)
-RULES_CONTEXT = """
-(여기에 관리규약 내용을 붙여넣으세요. 
-테스트를 위해 처음엔 한 페이지만 넣어보시는 것도 좋습니다.)
-"""
-
-# 사용 가능한 모델 리스트 출력용 (임시 추가)
-#for m in genai.list_models():
-#    if 'generateContent' in m.supported_generation_methods:
-#        st.write(f"사용 가능 모델: {m.name}")
-        
-# 3. 모델 설정 (에러 방지용 세이프가드)
-# 안전 필터 때문에 응답이 거부되는 경우를 방지하기 위해 모든 필터를 끕니다.
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
-
-if user_input := st.chat_input("질문하세요"):
-    with st.chat_message("user"): st.markdown(user_input)
+# 2. PDF 파싱 및 FAISS 벡터 DB 구축 (캐싱하여 매번 새로 읽지 않도록 방지)
+@st.cache_resource
+def load_and_build_vector_db():
+    pdf_path = "rules.pdf"
+    if not os.path.exists(pdf_path):
+        return None
     
+    # PDF 읽기 및 텍스트 분할 (조항 단위로 잘릴 수 있도록 청크 설정)
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
+    splits = text_splitter.split_documents(docs)
+    
+    # 임베딩 및 FAISS 인덱스 생성 (임베딩도 무료 티어 사용)
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
+    
+    # 검색 엔진(Retriever) 설정: 가장 유사한 3개의 조항만 가져옴
+    return vectorstore.as_retriever(search_kwargs={"k": 3})
+
+retriever = load_and_build_vector_db()
+
+if retriever is None:
+    st.warning("⚠️ 'rules.pdf' 파일이 없습니다. GitHub에 PDF 파일을 업로드해주세요.")
+    st.stop()
+
+# 3. LLM 설정 (토큰 소모가 적고 빠른 Flash 모델 사용)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True # 출처 확인용
+)
+
+# 4. 채팅 UI 구성
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("예: 층간소음 관리위원회 개최 기준이 어떻게 돼?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
     with st.chat_message("assistant"):
-        try:
-            # 모델 호출 시 안전 설정 적용
-            model = genai.GenerativeModel('gemini-2.0-flash', safety_settings=safety_settings)
-            
-            # 프롬프트 생성
-            prompt = f"다음 관리규약을 바탕으로 답변해줘:\n{RULES_CONTEXT}\n\n질문: {user_input}"
-            
-            response = model.generate_content(prompt)
-            
-            # 응답이 비어있거나 차단되었는지 확인
-            if response.candidates:
-                candidate = response.candidates[0]
-                if candidate.finish_reason == 3: # SAFETY 에러
-                    st.error("⚠️ AI가 안전 정책상 답변을 거부했습니다. (입력 내용 확인 필요)")
-                elif candidate.content.parts:
-                    answer = response.text
-                    st.markdown(answer)
-                else:
-                    st.error(f"⚠️ 응답이 생성되었으나 내용이 없습니다. 사유: {candidate.finish_reason}")
-            else:
-                st.error("⚠️ AI 응답 후보(Candidate)가 생성되지 않았습니다.")
+        with st.spinner("규약을 검색 중입니다..."):
+            try:
+                # FAISS에서 검색 후 답변 생성
+                response = qa_chain.invoke({"query": prompt})
+                answer = response["result"]
                 
-        except Exception as e:
-            st.error(f"❌ 최종 에러 발생: {e}")
-            if "quota" in str(e).lower():
-                st.info("💡 API 사용량이 초과되었습니다. 잠시 후 시도하거나 새 키를 발급받으세요.")
-            elif "400" in str(e):
-                st.info("💡 요청 형식이 잘못되었습니다. (텍스트가 너무 길거나 API 설정 오류)")
-
-
+                # 참고한 페이지(출처) 추출
+                sources = set([doc.metadata.get('page', 0) + 1 for doc in response["source_documents"]])
+                source_text = f"\n\n*(참고 페이지: {', '.join(map(str, sources))}p)*"
+                
+                final_answer = answer + source_text
+                st.markdown(final_answer)
+                st.session_state.messages.append({"role": "assistant", "content": final_answer})
+                
+            except Exception as e:
+                st.error(f"❌ 에러가 발생했습니다: {e}")
