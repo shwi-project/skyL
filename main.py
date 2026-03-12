@@ -1,7 +1,5 @@
 import streamlit as st
 import os
-import subprocess
-import sys
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -83,6 +81,7 @@ if prompt := st.chat_input("예: 층간소음 관리위원회 개최 기준이 �
                 
             except Exception as e:
                 st.error(f"❌ 에러가 발생했습니다: {e}")
+
 
 
 
