@@ -1,55 +1,47 @@
-import os
-import sys
-import subprocess
-
-
-# 2. 🚀 본 코드 시작
 import streamlit as st
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
+import google.generativeai as genai
+import os
+from pypdf import PdfReader
 
-# API 키 설정 (Secrets 우선, 없으면 하드코딩된 값 사용)
+# 1. API 키 설정
 API_KEY = st.secrets.get("GOOGLE_API_KEY", "AIzaSyBA-tHdAaJE4RsVuOtGohrhR5KOZKf926Q")
-os.environ["GOOGLE_API_KEY"] = API_KEY
+genai.configure(api_key=API_KEY)
 
 st.set_page_config(page_title="아파트 규약 AI", page_icon="🏢")
 st.title("🏢 관리규약 AI 조서")
 
-# 3. PDF 읽기 및 FAISS 벡터 DB 구축
-@st.cache_resource
-def get_retriever():
+# 2. PDF에서 텍스트 직접 추출 (캐싱하여 속도 최적화)
+@st.cache_data
+def load_pdf_text():
     pdf_path = "rules.pdf"
     if not os.path.exists(pdf_path):
         return None
     
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
-    splits = text_splitter.split_documents(docs)
-    
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vectorstore = FAISS.from_documents(documents=splits, embedding=embeddings)
-    return vectorstore.as_retriever(search_kwargs={"k": 3})
+    text = ""
+    try:
+        reader = PdfReader(pdf_path)
+        for page in reader.pages:
+            extracted = page.extract_text()
+            if extracted:
+                text += extracted + "\n"
+        return text
+    except Exception as e:
+        st.error(f"PDF 읽기 오류: {e}")
+        return None
 
-retriever = get_retriever()
+rules_text = load_pdf_text()
 
-if retriever is None:
+if not rules_text:
     st.warning("⚠️ 깃허브 최상위 경로에 'rules.pdf' 파일을 업로드해주세요.")
     st.stop()
 
-# 4. LLM 설정
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    chain_type="stuff",
-    retriever=retriever,
-    return_source_documents=True
-)
+# 3. 모델 설정 (긴 문맥 처리에 강한 최신 Flash 모델)
+# 사용 가능한 모델을 자동으로 찾습니다.
+available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+model_name = 'models/gemini-2.0-flash' if 'models/gemini-2.0-flash' in available_models else 'models/gemini-1.5-flash'
+model = genai.GenerativeModel(model_name)
 
-# 5. 채팅 UI
+# 4. 채팅 UI
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -57,24 +49,31 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("질문을 입력하세요 (예: 층간소음 규정이 어떻게 돼?)"):
+if prompt := st.chat_input("질문을 입력하세요 (예: 층간소음 관리위원회 구성 요건이 뭐야?)"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("규약을 확인하고 있습니다..."):
+        with st.spinner("규약 전문을 검토 중입니다..."):
             try:
-                response = qa_chain.invoke({"query": prompt})
-                answer = response["result"]
+                # PDF 전체 내용과 질문을 한 번에 전달
+                full_prompt = f"""
+                너는 아파트 동대표를 돕는 AI 비서야. 
+                아래 [관리규약 전문]을 꼼꼼히 읽고, [질문]에 대해 규약에 근거하여 정확하고 친절하게 답변해줘.
                 
-                # 출처 페이지 번호 추출
-                sources = set([doc.metadata.get('page', 0) + 1 for doc in response["source_documents"]])
-                source_text = f"\n\n*(참고: 관리규약 {', '.join(map(str, sources))}페이지)*"
+                [관리규약 전문]
+                {rules_text}
                 
-                final_answer = answer + source_text
-                st.markdown(final_answer)
-                st.session_state.messages.append({"role": "assistant", "content": final_answer})
+                [질문]
+                {prompt}
+                """
+                response = model.generate_content(full_prompt)
+                
+                if response.text:
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                else:
+                    st.error("답변을 생성하지 못했습니다.")
             except Exception as e:
                 st.error(f"❌ 에러 발생: {e}")
-
