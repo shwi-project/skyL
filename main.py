@@ -4,7 +4,8 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
+# 최신 방식 (langchain-community 패키지 활용)
+from langchain.chains.retrieval_qa.base import RetrievalQA
 
 # 페이지 설정
 st.set_page_config(page_title="아파트 관리규약 AI", page_icon="🏢")
@@ -56,4 +57,5 @@ if query:
         
         with st.expander("📌 근거 조항 확인"):
             for doc in result["source_documents"]:
+
                 st.write(f"- {doc.page_content[:200]}...")
