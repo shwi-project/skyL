@@ -18,9 +18,9 @@ RULES_CONTEXT = """
 """
 
 # 사용 가능한 모델 리스트 출력용 (임시 추가)
-for m in genai.list_models():
-    if 'generateContent' in m.supported_generation_methods:
-        st.write(f"사용 가능 모델: {m.name}")
+#for m in genai.list_models():
+#    if 'generateContent' in m.supported_generation_methods:
+#        st.write(f"사용 가능 모델: {m.name}")
         
 # 3. 모델 설정 (에러 방지용 세이프가드)
 # 안전 필터 때문에 응답이 거부되는 경우를 방지하기 위해 모든 필터를 끕니다.
@@ -63,4 +63,5 @@ if user_input := st.chat_input("질문하세요"):
                 st.info("💡 API 사용량이 초과되었습니다. 잠시 후 시도하거나 새 키를 발급받으세요.")
             elif "400" in str(e):
                 st.info("💡 요청 형식이 잘못되었습니다. (텍스트가 너무 길거나 API 설정 오류)")
+
 
