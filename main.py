@@ -1,56 +1,56 @@
 import streamlit as st
 import google.generativeai as genai
-from pypdf import PdfReader
 import os
 
-# 1. API 키 설정 및 디버깅
+# 1. API 키 설정
 if "GOOGLE_API_KEY" in st.secrets:
-    api_key = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("🔑 Secrets에 GOOGLE_API_KEY가 없습니다!")
+    st.error("🔑 Secrets에 API 키를 등록해주세요.")
     st.stop()
 
-st.title("🏢 관리규약 AI (최종 디버깅)")
+st.title("🏢 우리 아파트 관리규약 AI")
 
-# 2. PDF 텍스트 추출
-@st.cache_resource
-def get_pdf_content(pdf_path):
-    if not os.path.exists(pdf_path): return None
-    reader = PdfReader(pdf_path)
-    return "".join([page.extract_text() for page in reader.pages])
+# 2. 관리규약 텍스트 직접 입력 (여기에 PDF 내용을 복사해서 붙여넣으세요)
+# 내용이 너무 길면 별도의 .txt 파일로 만들어서 읽어도 되지만, 
+# 에러를 피하기 위해 일단 여기에 직접 붙여넣는 걸 추천합니다.
+RULES_CONTEXT = """
+여기에 관리규약 전체 내용을 복사해서 붙여넣으세요.
+제1조(목적) ...
+제2조(용어의 정의) ...
+(중략)
+주차규약 제n조...
+"""
 
-PDF_FILE = "rules.pdf"
-rules_context = get_pdf_content(PDF_FILE)
+# 3. 채팅 UI
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# 3. 모델 가용성 체크 (404 방지 핵심)
-try:
-    # 현재 키로 사용 가능한 모델들을 리스트업합니다.
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    # 만약 리스트에 gemini-1.5-flash가 없으면 첫 번째 모델을 강제로 선택합니다.
-    target_model = 'models/gemini-1.5-flash'
-    if target_model not in available_models:
-        target_model = available_models[0] if available_models else None
-        
-    if not target_model:
-        st.error("사용 가능한 Gemini 모델이 없습니다. API 키를 확인해주세요.")
-        st.stop()
-except Exception as e:
-    st.error(f"모델 목록 확인 중 에러: {e}")
-    st.stop()
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-# 4. 채팅 로직
-if user_input := st.chat_input("질문하세요"):
+if user_input := st.chat_input("규약에 대해 물어보세요"):
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"): st.markdown(user_input)
-    
+
     with st.chat_message("assistant"):
         try:
-            model = genai.GenerativeModel(target_model)
-            prompt = f"다음 규약을 참고해 답해줘: {rules_context[:10000]}\n\n질문: {user_input}" # 컨텍스트 제한(안전빵)
+            # 모델 호출
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            prompt = f"""
+            당신은 아파트 관리규약 전문가입니다. 아래 제공된 [규약내용]을 바탕으로 답변하세요.
+            내용이 없으면 관리사무소에 문의하라고 안내하고, 답변 끝에는 관련 조항을 언급하세요.
+
+            [규약내용]
+            {RULES_CONTEXT}
+
+            질문: {user_input}
+            """
             
             response = model.generate_content(prompt)
             st.markdown(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
+            
         except Exception as e:
             st.error(f"응답 생성 에러: {e}")
-            st.info(f"시도한 모델명: {target_model}")
