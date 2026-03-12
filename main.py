@@ -1,84 +1,73 @@
 import streamlit as st
 import os
 
-# 1. 라이브러리 로드 (에러 추적 강화)
+# [강력 조치] 라이브러리 로드 순서 및 에러 핸들링
 try:
-    import langchain
     from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
     from langchain_community.document_loaders import PyPDFLoader
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_community.vectorstores import Chroma
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from langchain.chains import create_retrieval_chain
     from langchain.chains.combine_documents import create_stuff_documents_chain
-    from langchain.chains.retrieval import create_retrieval_chain
     from langchain_core.prompts import ChatPromptTemplate
-except ImportError as e:
-    st.error(f"❌ 라이브러리 로드 실패: {e}")
-    st.info("requirements.txt 파일을 다시 확인하고 App을 Reboot 해주세요.")
+except Exception as e:
+    st.error(f"⚠️ 라이브러리 구성 에러: {e}")
+    st.info("requirements.txt의 라이브러리들이 서버에 설치되는 중일 수 있습니다. 1~2분 후 Reboot 해주세요.")
     st.stop()
 
-# 2. API 키 설정
+# API 키 설정
 if "GOOGLE_API_KEY" in st.secrets:
     os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 else:
-    st.error("🔑 Streamlit Secrets에 'GOOGLE_API_KEY'가 없습니다.")
+    st.error("🔑 Streamlit Secrets에 'GOOGLE_API_KEY'를 등록해주세요.")
     st.stop()
 
-st.title("🏢 아파트 관리규약 AI 조서")
+st.title("🏢 우리 아파트 관리규약 AI")
 
 @st.cache_resource
-def init_qa_chain(pdf_path):
-    if not os.path.exists(pdf_path):
-        return None
+def init_bot(pdf_path):
+    if not os.path.exists(pdf_path): return None
     
-    try:
-        loader = PyPDFLoader(pdf_path)
-        pages = loader.load_and_split()
-        
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-        splits = text_splitter.split_documents(pages)
-        
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        # 가벼운 로컬 벡터 저장소 Chroma 사용
-        vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
-        
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
-        
-        # 프롬프트 구성
-        prompt = ChatPromptTemplate.from_template("""
-        당신은 아파트 관리규약 전문가입니다. 아래 내용을 바탕으로 질문에 답하세요.
-        내용이 없으면 관리사무소에 문의하라고 친절히 안내하세요.
-        
-        Context: {context}
-        Question: {input}
-        """)
-        
-        combine_docs_chain = create_stuff_documents_chain(llm, prompt)
-        return create_retrieval_chain(vectorstore.as_retriever(), combine_docs_chain)
-    except Exception as e:
-        st.error(f"엔진 초기화 중 에러: {e}")
-        return None
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
+    
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    splits = text_splitter.split_documents(docs)
+    
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # FAISS 대신 설치가 훨씬 쉬운 Chroma 사용
+    vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+    
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    
+    prompt = ChatPromptTemplate.from_template("""
+    당신은 아파트 관리규약 전문가입니다. 아래 내용을 바탕으로 답변하세요.
+    Context: {context}
+    Question: {input}
+    """)
+    
+    combine_docs_chain = create_stuff_documents_chain(llm, prompt)
+    return create_retrieval_chain(vectorstore.as_retriever(), combine_docs_chain)
 
-# 파일명 확인
+# PDF 파일명 (GitHub에 올린 파일명과 일치해야 함)
 PDF_FILE = "rules.pdf" 
 
 if os.path.exists(PDF_FILE):
-    qa_chain = init_qa_chain(PDF_FILE)
+    qa_chain = init_bot(PDF_FILE)
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
     for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+        with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-    if user_input := st.chat_input("질문하세요"):
+    if user_input := st.chat_input("질문을 입력하세요"):
         st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.markdown(user_input)
+        with st.chat_message("user"): st.markdown(user_input)
 
         with st.chat_message("assistant"):
-            response = qa_chain.invoke({"input": user_input})
-            st.markdown(response["answer"])
-            st.session_state.messages.append({"role": "assistant", "content": response["answer"]})
+            res = qa_chain.invoke({"input": user_input})
+            st.markdown(res["answer"])
+            st.session_state.messages.append({"role": "assistant", "content": res["answer"]})
 else:
-    st.warning(f"⚠️ '{PDF_FILE}' 파일이 없습니다. GitHub 상위 폴더에 업로드해주세요.")
+    st.warning(f"'{PDF_FILE}' 파일을 찾을 수 없습니다. GitHub에 업로드해주세요.")
