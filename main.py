@@ -49,7 +49,7 @@ if rules_context:
         with st.chat_message("assistant"):
             try:
                 # 4. Gemini 모델 호출 (Context를 직접 주입하는 방식)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('models/gemini-1.5-flash')
                 
                 prompt = f"""
                 당신은 아파트 관리규약 전문가입니다. 
@@ -71,3 +71,4 @@ if rules_context:
                 st.error(f"AI 응답 생성 중 에러가 발생했습니다: {e}")
 else:
     st.error(f"❌ '{PDF_FILE}' 파일을 찾을 수 없습니다. GitHub 리포지토리에 파일을 올려주세요.")
+
