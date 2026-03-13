@@ -264,9 +264,10 @@ with tab_keyword:
         keyword = st.text_input(
             "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
             label_visibility="collapsed",
+            key="keyword_input",
         )
     with col2:
-        use_ai_summary = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready)
+        use_ai_summary = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready, key="ai_summary_toggle")
 
     if keyword:
         keyword_lower = keyword.lower()
@@ -289,34 +290,34 @@ with tab_keyword:
         else:
             st.success(f"총 **{len(matched)}개** 조항 발견")
 
-            # AI 요약
+            # AI 요약 — 같은 키워드면 캐시된 결과 사용 (탭 전환 시 재호출 방지)
             if use_ai_summary and api_ready:
-                # 요약용: 조항당 200자로 제한해 토큰 절약
-                # 검색된 규약의 전체 텍스트 전달
-                docs_in_results = list({a["doc"] for a in matched})
-                full_ctx = "\n\n".join(
-                    f"=== [{n}] ===\n{pdf_texts[n]}"
-                    for n in docs_in_results if n in pdf_texts
-                )
-                prompt = f"""너는 아파트 규약 전문 AI 비서야.
-아래 규약 전문에서 '{keyword}' 관련 내용을 찾아 아래 형식으로 답변해줘.
-
-답변 형식:
-1. 핵심 내용 요약 (시간, 금액, 횟수 등 구체적 기준이 있으면 반드시 명시)
-2. 근거: 규약명 + 조항번호
-
-불필요한 서론 없이 바로 답변해줘.
+                cache_key = f"summary_{keyword}"
+                if cache_key not in st.session_state:
+                    docs_in_results = list({a["doc"] for a in matched})
+                    full_ctx = "\n\n".join(
+                        f"=== [{n}] ===\n{pdf_texts[n]}"
+                        for n in docs_in_results if n in pdf_texts
+                    )
+                    ai_prompt = f"""아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.
+구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,
+관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.
+서론 없이 바로 내용부터 시작해줘.
 
 [규약 전문]
 {full_ctx}"""
-                with st.spinner("AI가 검색 결과를 요약하는 중..."):
-                    try:
-                        result = ai_generate(prompt)
-                        if result:
-                            st.markdown("##### 🤖 AI 요약")
-                            st.markdown(result)
-                    except Exception as e:
-                        st.warning(f"AI 요약 실패: {e}")
+                    with st.spinner("AI가 요약하는 중..."):
+                        try:
+                            result = ai_generate(ai_prompt)
+                            st.session_state[cache_key] = result
+                        except Exception as e:
+                            st.warning(f"AI 요약 실패: {e}")
+                            st.session_state[cache_key] = None
+
+                cached = st.session_state.get(cache_key)
+                if cached:
+                    st.markdown("##### 🤖 AI 요약")
+                    st.markdown(cached)
 
             st.divider()
 
@@ -408,14 +409,14 @@ with tab_ai:
                     for dn in selected:
                         all_arts += get_all_articles(dn, pdf_texts[dn])
 
-                    # 규약 전문 전체를 전달 (45,000토큰 = Tier1 한도의 4.5%)
                     full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
-아래 규약 전문을 꼼꼼히 읽고 질문에 정확하게 답변해줘.
+아래 규약 전문을 읽고 질문에 답변해줘.
 
-답변 형식:
-1. 핵심 답변 (명확하고 구체적으로)
-2. 근거: 규약명 + 조항번호 (예: 주차규약 제20조 제2항)
-3. 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고 답해줘
+규칙:
+- 서론/형식 레이블("핵심 답변:", "근거:" 등) 없이 자연스럽게 답변해줘
+- 답변 마지막에 근거 조항을 한 줄로 명시해줘 (예: 📌 관리규약 제16조)
+- 질문과 직접 관련된 규약의 조항만 근거로 써줘. 관련 없는 규약은 언급하지 마
+- 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고만 답해줘
 
 [규약 전문]
 {combined_text}
