@@ -124,6 +124,8 @@ for i, doc in enumerate(DOC_ORDER):
             type="primary" if is_active else "secondary",
         ):
             st.session_state.selected_doc = doc
+            st.session_state["keyword_input"] = ""
+            st.rerun()
 
 selected = st.session_state.selected_doc
 selected_names = [selected]
