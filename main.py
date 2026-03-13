@@ -12,6 +12,12 @@ import streamlit as st
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
+st.markdown("""<style>
+/* 타이틀 아래 divider 여백 축소 */
+.main .block-container { padding-top: 1.5rem; }
+hr { margin: 0.4rem 0 0.8rem !important; }
+</style>""", unsafe_allow_html=True)
+
 # 헤더
 try:
     with open("logo.png", "rb") as f:
@@ -25,7 +31,7 @@ except Exception:
     logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
 
 st.markdown(
-    f"""<div style='display:flex;align-items:flex-start;margin-bottom:4px'>
+    f"""<div style='display:flex;align-items:flex-start;margin-bottom:2px'>
     {logo_html}
     <div style='line-height:1.2'>
       <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
@@ -87,7 +93,7 @@ loaded_names = list(pdf_texts.keys())
 # 3. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
-selected = st.multiselect("🔍 검색할 규약 선택", options=loaded_names, default=loaded_names)
+selected = st.multiselect("📋 검색할 규약 선택", options=loaded_names, default=loaded_names)
 if not selected:
     st.info("검색할 규약을 하나 이상 선택해주세요.")
     st.stop()
@@ -273,9 +279,9 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
 # 7. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
-    "관리규약":         "#1a6ebd",
-    "주차규약":         "#2e8b57",
-    "커뮤니티센터 규약": "#8b4513",
+    "관리규약":         "#2a5298",
+    "주차규약":         "#1a6e4a",
+    "커뮤니티센터 규약": "#7a4a1a",
 }
 
 def render_article_card(art: dict, keyword: str = "") -> None:
@@ -286,22 +292,28 @@ def render_article_card(art: dict, keyword: str = "") -> None:
             r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
             content,
         )
-    bc = DOC_COLORS.get(art["doc"], "#555")
+    bc = DOC_COLORS.get(art["doc"], "#4a5568")
     st.html(f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
-            margin-bottom:12px;background:#fafafa;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
-  <div style='margin-bottom:8px'>
-    <span style='background:{bc};color:white;padding:2px 8px;
-                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
-    &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{art["title"]}</span>
+<div style='border:1px solid rgba(196,160,80,0.15);border-radius:12px;padding:18px 22px;
+            margin-bottom:12px;
+            background:linear-gradient(135deg,rgba(196,160,80,0.04) 0%,rgba(255,255,255,0.02) 100%);
+            box-shadow:0 2px 12px rgba(0,0,0,0.3)'>
+  <div style='display:flex;align-items:center;margin-bottom:10px;gap:8px'>
+    <span style='background:{bc};color:white;padding:3px 10px;
+                 border-radius:4px;font-size:0.72rem;font-weight:600;
+                 letter-spacing:0.05em;font-family:Noto Sans KR,sans-serif'>{art["doc"]}</span>
+    <span style='font-size:0.95rem;font-weight:700;color:#e8d5a0;
+                 font-family:Noto Serif KR,serif'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.88rem;color:#333;line-height:1.8'>{content.replace(chr(10), '<br>')}</div>
+  <div style='font-size:0.85rem;color:#b0bcd8;line-height:1.9;
+              font-family:Noto Sans KR,sans-serif;
+              border-top:1px solid rgba(196,160,80,0.1);padding-top:10px'>{content.replace(chr(10), '<br>')}</div>
 </div>""")
 
 # ─────────────────────────────────────────
 # 8. 탭 구성
 # ─────────────────────────────────────────
-tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
+tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
@@ -314,7 +326,7 @@ with tab_keyword:
             label_visibility="collapsed", key="keyword_input",
         )
     with col2:
-        use_ai = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
+        use_ai = st.toggle("AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
 
     if keyword:
         kw = keyword.lower()
@@ -348,7 +360,7 @@ with tab_keyword:
                             st.session_state[cache_key] = None
 
                 if st.session_state.get(cache_key):
-                    st.markdown("##### 🤖 AI 요약")
+                    st.markdown("##### AI 요약")
                     st.markdown(st.session_state[cache_key])
 
             st.divider()
