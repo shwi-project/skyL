@@ -102,9 +102,9 @@ PDF_FILES = {
     "커뮤니티센터 규약": ("rules_community.pdf",    clean_community),
 }
 
-@st.cache_data
-def load_pdf_text(pdf_path: str, cleaner_name: str) -> str:
-    """PDF에서 텍스트 추출 후 정제. cleaner_name은 캐시 키 구분용."""
+@st.cache_data(show_spinner=False)
+def load_pdf_text(pdf_path: str, cleaner_name: str, _version: int = 4) -> str:
+    """PDF에서 텍스트 추출 후 정제. _version 변경 시 캐시 무효화."""
     cleaner_map = {
         "management": clean_management,
         "parking":    clean_parking,
@@ -242,8 +242,8 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
-@st.cache_data
-def get_all_articles(doc_name: str, text: str) -> list[dict]:
+@st.cache_data(show_spinner=False)
+def get_all_articles(doc_name: str, text: str, _version: int = 4) -> list[dict]:
     return parse_articles(doc_name, text)
 
 # ─────────────────────────────────────────
