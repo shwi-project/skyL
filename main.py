@@ -42,25 +42,21 @@ def is_toc_page(text: str) -> bool:
     return dot_count > 8
 
 def clean_management(text: str) -> str:
-    """관리규약 PDF 전용 정제: 분리된 글자 복원, 목차 제거."""
+    """관리규약 PDF 전용 정제.
+    PDF 특성: '제 조 {제목}{번호} 【 】' 형태로 추출됨 → '제{번호}조 {제목}' 으로 정규화.
+    """
     if is_toc_page(text):
         return ""
-    # 페이지 번호 제거 '- N -'
-    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
-    # '제 조N 【제목】' → '제N조 (제목)'  (조 뒤에 숫자)
-    text = re.sub(r'제\s*조\s*(\d+)\s*【\s*([^】]*?)\s*】', r'제\1조 (\2)', text)
-    # '제N조 【제목】' 또는 '제 N 조 【제목】' → '제N조 (제목)'
+    # "제 조 {제목}{번호} 【 】" → "\n\n제{번호}조 {제목}"
     text = re.sub(
-        r'제\s*(\d+)\s*조(?:의\s*\d+)?\s*【\s*([^】]*?)\s*】',
-        lambda m: f'제{m.group(1)}조 ({m.group(2).strip()})',
+        r'제\s*\n?조\s+([가-힣a-zA-Z0-9\s·,\.]*?)(\d+)\s*(?:【\s*】\s*)?',
+        lambda m: f'\n\n제{m.group(2).strip()}조 {m.group(1).strip()} ',
         text
     )
-    # 남은 【 】 괄호 정리
-    text = re.sub(r'【\s*([^】]*?)\s*】', r'(\1)', text)
-    # 제N조 앞에 줄바꿈 삽입 (붙어있는 경우)
-    text = re.sub(r'(?<!\n)(제\s*\d+\s*조)', r'\n\n\1', text)
-    # 장(章) 앞에도 줄바꿈
-    text = re.sub(r'(?<!\n)(제\s*\d+\s*장)', r'\n\n\1', text)
+    # 페이지 번호 제거 '- N -'
+    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
+    # 남은 【 】 괄호 제거
+    text = re.sub(r'【[^】]*】', '', text)
     # ①②③ 등 항번호 앞에 줄바꿈
     text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
     # 과도한 공백 정리
@@ -447,9 +443,11 @@ with tab_ai:
                         seen_keys = set()
 
                         # "관리규약 제16조", "주차규약 제20조" 패턴 추출
+                        # 📌 등 기호 제거 후 매칭
+                        clean_response = re.sub(r"[📌✅•·▶◆※]", " ", response_text)
                         pairs = re.findall(
                             r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)\s*제\s*(\d+)\s*조",
-                            response_text
+                            clean_response
                         )
                         for alias, num in pairs:
                             doc_name = DOC_ALIAS.get(alias.strip(), alias.strip())
