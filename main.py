@@ -341,6 +341,7 @@ with tab_ai:
         if k not in st.session_state:
             st.session_state[k] = None if k != "ai_articles" else []
 
+    # 새 질문 입력 시 → 초기화 + rerun
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.ai_question = None
         st.session_state.ai_response = None
@@ -348,22 +349,20 @@ with tab_ai:
         st.session_state["_ai_pending"] = prompt
         st.rerun()
 
-    # rerun 후 이 시점엔 ai_question=None, _ai_pending=있음
-    # → 아래 elif 조건 모두 False → 화면에 아무것도 없음
-    if st.session_state["_ai_pending"]:
-        prompt = st.session_state.pop("_ai_pending")
+    pending = st.session_state["_ai_pending"]
+
+    if pending:
+        # pending을 먼저 None으로 만들어서 재진입 방지
         st.session_state["_ai_pending"] = None
 
-        st.caption(f"🔍 디버그: pending={prompt!r}, ai_question={st.session_state.ai_question!r}")
-
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(pending)
         with st.chat_message("assistant"):
             with st.spinner("AI가 답변을 생성하는 중..."):
                 try:
                     response_text = ai_generate(
                         f"[규약 전문]\n{combined_text}\n\n"
-                        f"[질문]\n{prompt}\n\n"
+                        f"[질문]\n{pending}\n\n"
                         "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
                         "1. 형식 레이블 없이 자연스럽게 답변\n"
                         "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 근거 조항 명시 (필수):\n"
@@ -387,7 +386,7 @@ with tab_ai:
                             for art in related:
                                 render_article_card(art)
 
-                    st.session_state.ai_question = prompt
+                    st.session_state.ai_question = pending
                     st.session_state.ai_response = response_text
                     st.session_state.ai_articles = related
 
