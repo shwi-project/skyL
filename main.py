@@ -262,7 +262,8 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
         for art in all_arts:
             if doc_name and art["doc"] != doc_name:
                 continue
-            if re.search(rf"별표\s*{num}", art["title"]) and art not in related:
+            # 실제 별표 섹션만 매칭 (제목이 충분히 길고 별표로 시작하는 것)
+            if re.search(rf"별표\s*{num}", art["title"]) and len(art["title"]) > 10 and art not in related:
                 related.append(art)
                 break
 
