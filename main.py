@@ -360,18 +360,51 @@ with tab_ai:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner("규약 전문을 검토 중입니다..."):
+            with st.spinner("관련 조항을 검색 중입니다..."):
                 try:
+                    # ── 질문에서 키워드 추출 후 관련 조항만 필터링 ──
+                    # 조사/어미 제거 후 2글자 이상 단어만 추출
+                    q_words = [w for w in re.split(r"[\s,?!.]+", prompt) if len(w) >= 2]
+
+                    all_arts = []
+                    for dn in selected:
+                        all_arts += get_all_articles(dn, pdf_texts[dn])
+
+                    # 각 키워드가 하나라도 포함된 조항 수집 (최대 15개)
+                    relevant = []
+                    seen = set()
+                    for art in all_arts:
+                        text_lower = art["content"].lower()
+                        if any(w.lower() in text_lower for w in q_words):
+                            key = (art["doc"], art["title"])
+                            if key not in seen:
+                                seen.add(key)
+                                relevant.append(art)
+                        if len(relevant) >= 15:
+                            break
+
+                    # 관련 조항이 없으면 전체에서 앞 10개만 사용
+                    if not relevant:
+                        relevant = all_arts[:10]
+
+                    ctx = "\n\n".join(
+                        f"[{a['doc']}] {a['title']}\n{a['content']}"
+                        for a in relevant
+                    )
+                    # 토큰 절약: 최대 6000자로 제한
+                    if len(ctx) > 6000:
+                        ctx = ctx[:6000] + "\n...(이하 생략)"
+
                     full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
-아래 [규약 전문]을 꼼꼼히 읽고 [질문]에 대해 규약에 근거하여 정확하고 친절하게 답변해줘.
+아래 [관련 조항]을 바탕으로 [질문]에 간결하고 정확하게 답변해줘.
 
 답변 형식:
-1. 핵심 답변 (3줄 이내로 간결하게)
-2. 근거 조항: 규약명 + 조항 번호 명시 (예: 주차규약 제20조 제7항)
-3. 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고 답해줘
+1. 핵심 답변 (3줄 이내)
+2. 근거: 규약명 + 조항번호 (예: 주차규약 제20조)
+3. 규약에 없으면 "해당 내용을 찾을 수 없습니다"라고 답해줘
 
-[규약 전문]
-{combined_text}
+[관련 조항]
+{ctx}
 
 [질문]
 {prompt}"""
