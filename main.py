@@ -7,9 +7,23 @@ from pypdf import PdfReader
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🦅", layout="wide")
-st.title("🦅🏰 롯데캐슬스카이엘 규약 통합 검색")
-st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
+from PIL import Image as _Image
+st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
+
+# 헤더: 로고 + 타이틀
+_col_logo, _col_title = st.columns([1, 10])
+with _col_logo:
+    try:
+        _logo = _Image.open("logo.png")
+        st.image(_logo, width=48)
+    except Exception:
+        st.write("🏰")
+with _col_title:
+    st.markdown(
+        "<h3 style='margin:0;padding-top:6px;line-height:1.3'>롯데캐슬스카이엘 규약 통합 검색</h3>"
+        "<p style='margin:0;font-size:0.85rem;color:#888'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</p>",
+        unsafe_allow_html=True
+    )
 
 with st.expander("🔧 사용 가능한 모델 목록 확인"):
     if st.button("모델 조회"):
