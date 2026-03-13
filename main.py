@@ -184,7 +184,7 @@ def ai_generate(prompt: str) -> str:
     }
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 2048},
+        "generationConfig": {"maxOutputTokens": 8192},
     }
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
