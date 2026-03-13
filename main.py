@@ -363,10 +363,10 @@ with tab_ai:
 
                     related = find_related_articles(response_text, all_arts)
 
-                    # 디버그: 매칭 실패 시 원인 표시 (나중에 제거)
+                    # 디버그
                     pairs = extract_pairs(response_text)
-                    if not related and pairs:
-                        st.caption(f"⚠️ 추출된 조항: {pairs} / 전체 조항 수: {len(all_arts)}")
+                    st.caption(f"🔍 AI응답 마지막 100자: {repr(response_text[-100:])}")
+                    st.caption(f"🔍 추출 쌍: {pairs} / 전체조항수: {len(all_arts)}")
 
                     if related:
                         with st.expander("📋 관련 조항 원문 보기", expanded=False):
