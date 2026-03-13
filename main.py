@@ -22,48 +22,84 @@ st.markdown("""
 /* 레이아웃 여백 */
 .main .block-container { max-width: 860px; padding: 2.5rem 2rem 5rem; }
 
-/* 🌟 핵심: 얇고 깔끔한 1px 실선 구분선 */
+/* 구분선 (아주 얇고 연하게) */
 hr { 
     border: none !important; 
     border-top: 1px solid rgba(150, 150, 150, 0.2) !important; 
     margin: 1.5rem 0 !important; 
 }
 
-/* 멀티셀렉트 & 입력창 (투명도 기반으로 라이트/다크 자동 대응) */
-[data-baseweb="select"] > div,
-[data-testid="stTextInput"] input,
-[data-testid="stChatInput"] textarea {
-    background-color: transparent !important;
-    border: 1px solid rgba(150, 150, 150, 0.3) !important;
-    border-radius: 8px !important;
-    color: var(--text-color) !important;
-}
-[data-baseweb="select"] > div:hover,
-[data-testid="stTextInput"] input:focus,
-[data-testid="stChatInput"] textarea:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 1px #3b82f6 !important;
-}
-
-/* 탭 디자인 (깔끔한 실선) */
+/* 탭 디자인 */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    border-bottom: 1px solid rgba(150, 150, 150, 0.2) !important;
-    gap: 1rem !important;
+    gap: 1.5rem !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
     font-weight: 600 !important;
-    padding: 0.8rem 0.5rem !important;
+    padding: 0.8rem 0.2rem !important;
 }
 
-/* 챗 메시지 배경 제거 (깔끔하게 텍스트만) */
+/* 🌟 멀티셀렉트 태그 (빨간색 튀는 것 방지, 차분한 색상으로) */
+[data-baseweb="tag"] {
+    background-color: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
+    border: 1px solid rgba(150, 150, 150, 0.3) !important;
+}
+
+/* 챗 메시지 배경 제거 */
 [data-testid="stChatMessage"] {
     background: transparent !important;
     border: none !important;
 }
 
-/* Expander (접기/펴기) */
+/* Expander */
 [data-testid="stExpander"] {
+    background-color: transparent !important;
+    border: 1px solid rgba(150, 150, 150, 0.2) !important;
+    border-radius: 8px !important;
+}
+</style>
+""", unsafe_allow_html=True)# ── 글로벌 CSS ──
+st.markdown("""
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+
+/* 레이아웃 여백 */
+.main .block-container { max-width: 860px; padding: 2.5rem 2rem 5rem; }
+
+/* 구분선 (아주 얇고 연하게) */
+hr { 
+    border: none !important; 
+    border-top: 1px solid rgba(150, 150, 150, 0.2) !important; 
+    margin: 1.5rem 0 !important; 
+}
+
+/* 탭 디자인 */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 1.5rem !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    font-weight: 600 !important;
+    padding: 0.8rem 0.2rem !important;
+}
+
+/* 🌟 멀티셀렉트 태그 (빨간색 튀는 것 방지, 차분한 색상으로) */
+[data-baseweb="tag"] {
     background-color: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
+    border: 1px solid rgba(150, 150, 150, 0.3) !important;
+}
+
+/* 챗 메시지 배경 제거 */
+[data-testid="stChatMessage"] {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background-color: transparent !important;
     border: 1px solid rgba(150, 150, 150, 0.2) !important;
     border-radius: 8px !important;
 }
@@ -90,14 +126,13 @@ st.markdown(
     <div style='font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:var(--text-color);'>
       롯데캐슬스카이엘 규약 통합 검색
     </div>
-    <div style='font-size:0.9rem;font-weight:500;opacity:0.6;margin-top:4px;'>
+    <div style='font-size:0.9rem;font-weight:500;color:var(--text-color);opacity:0.6;margin-top:4px;'>
       관리규약 · 주차규약 · 커뮤니티센터 규약
     </div>
   </div>
 </div>""",
     unsafe_allow_html=True,
 )
-
 
 
 # ─────────────────────────────────────────
@@ -347,11 +382,11 @@ DOC_COLORS = {
 def render_article_card(art: dict, keyword: str = "") -> None:
     content = art["content"]
     
-    # 검색어 형광펜 (라이트/다크 모두 잘 보이는 노란 투명색)
+    # 검색어 형광펜 (가독성 높은 노란색)
     if keyword:
         content = re.sub(
             f"(?i)({re.escape(keyword)})",
-            r"<mark style='background-color:rgba(250, 204, 21, 0.3); border-radius:3px; padding:0 4px;'>\1</mark>",
+            r"<mark style='background-color:rgba(250, 204, 21, 0.3); color:var(--text-color); border-radius:3px; padding:0 4px;'>\1</mark>",
             content,
         )
         
@@ -367,7 +402,7 @@ def render_article_card(art: dict, keyword: str = "") -> None:
                  border-radius:6px;font-size:0.8rem;font-weight:600;'>{art["doc"]}</span>
     <span style='font-size:1.1rem;font-weight:800;color:var(--text-color);'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.95rem;line-height:1.7;opacity:0.85;color:var(--text-color);
+  <div style='font-size:0.95rem;line-height:1.7;color:var(--text-color);
               border-top:1px dashed rgba(150, 150, 150, 0.2);padding-top:12px;'>
     {content.replace(chr(10), '<br>')}
   </div>
