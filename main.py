@@ -27,9 +27,11 @@ except Exception:
 # 2. PDF 텍스트 추출 (파일별 캐싱)
 # ─────────────────────────────────────────
 PDF_FILES = {
-    "관리규약":        "rules_management.pdf",
+    #"관리규약":        "rules_management.pdf",
+    "관리규약":        "rules_parking.pdf",
     "주차규약":        "rules_parking.pdf",
-    "커뮤니티센터 규약": "rules_community.pdf",
+    "커뮤니티센터 규약": "rules_parking.pdf",
+    #"커뮤니티센터 규약": "rules_community.pdf",
 }
 
 @st.cache_data
@@ -196,3 +198,4 @@ with tab_ai:
         if st.button("🗑️ 대화 초기화"):
             st.session_state.messages = []
             st.rerun()
+
