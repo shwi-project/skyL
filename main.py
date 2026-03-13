@@ -12,128 +12,27 @@ import streamlit as st
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
-# ── 글로벌 CSS ──
-st.markdown("""
-<style>
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-
-* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
-
-/* 레이아웃 여백 */
-.main .block-container { max-width: 860px; padding: 2.5rem 2rem 5rem; }
-
-/* 구분선 (아주 얇고 연하게) */
-hr { 
-    border: none !important; 
-    border-top: 1px solid rgba(150, 150, 150, 0.2) !important; 
-    margin: 1.5rem 0 !important; 
-}
-
-/* 탭 디자인 */
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 1.5rem !important;
-}
-[data-testid="stTabs"] [data-baseweb="tab"] {
-    font-weight: 600 !important;
-    padding: 0.8rem 0.2rem !important;
-}
-
-/* 🌟 멀티셀렉트 태그 (빨간색 튀는 것 방지, 차분한 색상으로) */
-[data-baseweb="tag"] {
-    background-color: var(--secondary-background-color) !important;
-    color: var(--text-color) !important;
-    border: 1px solid rgba(150, 150, 150, 0.3) !important;
-}
-
-/* 챗 메시지 배경 제거 */
-[data-testid="stChatMessage"] {
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Expander */
-[data-testid="stExpander"] {
-    background-color: transparent !important;
-    border: 1px solid rgba(150, 150, 150, 0.2) !important;
-    border-radius: 8px !important;
-}
-</style>
-""", unsafe_allow_html=True)# ── 글로벌 CSS ──
-st.markdown("""
-<style>
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-
-* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
-
-/* 레이아웃 여백 */
-.main .block-container { max-width: 860px; padding: 2.5rem 2rem 5rem; }
-
-/* 구분선 (아주 얇고 연하게) */
-hr { 
-    border: none !important; 
-    border-top: 1px solid rgba(150, 150, 150, 0.2) !important; 
-    margin: 1.5rem 0 !important; 
-}
-
-/* 탭 디자인 */
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 1.5rem !important;
-}
-[data-testid="stTabs"] [data-baseweb="tab"] {
-    font-weight: 600 !important;
-    padding: 0.8rem 0.2rem !important;
-}
-
-/* 🌟 멀티셀렉트 태그 (빨간색 튀는 것 방지, 차분한 색상으로) */
-[data-baseweb="tag"] {
-    background-color: var(--secondary-background-color) !important;
-    color: var(--text-color) !important;
-    border: 1px solid rgba(150, 150, 150, 0.3) !important;
-}
-
-/* 챗 메시지 배경 제거 */
-[data-testid="stChatMessage"] {
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Expander */
-[data-testid="stExpander"] {
-    background-color: transparent !important;
-    border: 1px solid rgba(150, 150, 150, 0.2) !important;
-    border-radius: 8px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # 헤더
 try:
     with open("logo.png", "rb") as f:
         logo_b64 = base64.b64encode(f.read()).decode()
     logo_html = (
         f"<img src='data:image/png;base64,{logo_b64}' "
-        "style='width:42px;height:42px;object-fit:contain;"
-        "margin-right:12px;pointer-events:none;'>"
+        "style='width:36px;height:36px;object-fit:contain;"
+        "vertical-align:top;margin-right:10px;pointer-events:none;'>"
     )
 except Exception:
-    logo_html = "<span style='font-size:1.8rem;margin-right:12px'>🏰</span>"
+    logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
 
 st.markdown(
-    f"""
-<div style='display:flex;align-items:center;padding:1rem 0 0.5rem; margin-bottom:0;'>
-  {logo_html}
-  <div>
-    <div style='font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:var(--text-color);'>
-      롯데캐슬스카이엘 규약 통합 검색
-    </div>
-    <div style='font-size:0.9rem;font-weight:500;color:var(--text-color);opacity:0.6;margin-top:4px;'>
-      관리규약 · 주차규약 · 커뮤니티센터 규약
-    </div>
-  </div>
-</div>""",
+    f"""<div style='display:flex;align-items:flex-start;margin-bottom:4px'>
+    {logo_html}
+    <div style='line-height:1.2'>
+      <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
+      <div style='font-size:0.78rem;color:#999;margin-top:2px'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</div>
+    </div></div>""",
     unsafe_allow_html=True,
 )
-
 
 # ─────────────────────────────────────────
 # 1. API 키
@@ -374,38 +273,29 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
 # 7. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
-    "관리규약":         "#3b82f6", # 블루
-    "주차규약":         "#10b981", # 에메랄드
-    "커뮤니티센터 규약": "#f59e0b", # 오렌지
+    "관리규약":         "#1a6ebd",
+    "주차규약":         "#2e8b57",
+    "커뮤니티센터 규약": "#8b4513",
 }
 
 def render_article_card(art: dict, keyword: str = "") -> None:
     content = art["content"]
-    
-    # 검색어 형광펜 (가독성 높은 노란색)
     if keyword:
         content = re.sub(
             f"(?i)({re.escape(keyword)})",
-            r"<mark style='background-color:rgba(250, 204, 21, 0.3); color:var(--text-color); border-radius:3px; padding:0 4px;'>\1</mark>",
+            r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
             content,
         )
-        
-    bc = DOC_COLORS.get(art["doc"], "#888888")
-    
+    bc = DOC_COLORS.get(art["doc"], "#555")
     st.html(f"""
-<div style='border: 1px solid rgba(150, 150, 150, 0.2); border-radius:12px;
-            padding:1.5rem; margin-bottom:1.2rem;
-            background-color: var(--secondary-background-color);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);'>
-  <div style='display:flex;align-items:center;margin-bottom:12px;gap:10px'>
-    <span style='background-color:{bc};color:white;padding:4px 10px;
-                 border-radius:6px;font-size:0.8rem;font-weight:600;'>{art["doc"]}</span>
-    <span style='font-size:1.1rem;font-weight:800;color:var(--text-color);'>{art["title"]}</span>
+<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
+            margin-bottom:12px;background:#fafafa;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
+  <div style='margin-bottom:8px'>
+    <span style='background:{bc};color:white;padding:2px 8px;
+                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
+    &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.95rem;line-height:1.7;color:var(--text-color);
-              border-top:1px dashed rgba(150, 150, 150, 0.2);padding-top:12px;'>
-    {content.replace(chr(10), '<br>')}
-  </div>
+  <div style='font-size:0.88rem;color:#333;line-height:1.8'>{content.replace(chr(10), '<br>')}</div>
 </div>""")
 
 # ─────────────────────────────────────────
