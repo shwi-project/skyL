@@ -7,9 +7,8 @@ from pypdf import PdfReader
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-st.set_page_config(page_title="롯데캐슬 스카이엘 규약 검색", page_icon="🏢", layout="wide")
-
-st.title("🏢 아파트 규약 통합 검색")
+st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🦅", layout="wide")
+st.title("🦅롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
 # ─────────────────────────────────────────
@@ -24,32 +23,112 @@ except Exception:
     api_ready = False
 
 # ─────────────────────────────────────────
-# 2. PDF 텍스트 추출
+# 2. PDF별 텍스트 정제 함수
+# ─────────────────────────────────────────
+
+def is_toc_page(text: str) -> bool:
+    """목차 페이지 여부 판단 — · 문자가 많거나 줄점(……) 패턴이 많으면 목차."""
+    dot_count = text.count('·') + text.count('…') + text.count('‥')
+    return dot_count > 8
+
+def clean_management(text: str) -> str:
+    """관리규약 PDF 전용 정제: 분리된 글자 복원, 목차 제거."""
+    if is_toc_page(text):
+        return ""
+    # 페이지 번호 제거 '- N -'
+    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
+    # '제 조N 【제목】' → '제N조 (제목)'  (조 뒤에 숫자)
+    text = re.sub(r'제\s*조\s*(\d+)\s*【\s*([^】]*?)\s*】', r'제\1조 (\2)', text)
+    # '제N조 【제목】' 또는 '제 N 조 【제목】' → '제N조 (제목)'
+    text = re.sub(
+        r'제\s*(\d+)\s*조(?:의\s*\d+)?\s*【\s*([^】]*?)\s*】',
+        lambda m: f'제{m.group(1)}조 ({m.group(2).strip()})',
+        text
+    )
+    # 남은 【 】 괄호 정리
+    text = re.sub(r'【\s*([^】]*?)\s*】', r'(\1)', text)
+    # 제N조 앞에 줄바꿈 삽입 (붙어있는 경우)
+    text = re.sub(r'(?<!\n)(제\s*\d+\s*조)', r'\n\n\1', text)
+    # 장(章) 앞에도 줄바꿈
+    text = re.sub(r'(?<!\n)(제\s*\d+\s*장)', r'\n\n\1', text)
+    # ①②③ 등 항번호 앞에 줄바꿈
+    text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
+    # 과도한 공백 정리
+    text = re.sub(r'[ \t]{3,}', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+def clean_parking(text: str) -> str:
+    """주차규약 PDF 전용 정제: 붙어있는 조항 분리."""
+    if is_toc_page(text):
+        return ""
+    # '제N조 (제목)' 앞에 줄바꿈 삽입
+    text = re.sub(r'(?<!\n)(제\d+조)', r'\n\n\1', text)
+    # 장(章) 앞에도 줄바꿈
+    text = re.sub(r'(?<!\n)(제\d+장)', r'\n\n\1', text)
+    # ①②③ 등 항번호 앞에 줄바꿈
+    text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩])', r'\n\1', text)
+    # 숫자 목록 '1. ' '2. ' 앞에 줄바꿈
+    text = re.sub(r'(?<!\n)(\d+\. )', r'\n\1', text)
+    text = re.sub(r'[ \t]{2,}', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+def clean_community(text: str) -> str:
+    """커뮤니티센터 규약 PDF 전용 정제."""
+    if is_toc_page(text):
+        return ""
+    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
+    # 제N조 앞에 줄바꿈
+    text = re.sub(r'(?<!\n)(제\d+조)', r'\n\n\1', text)
+    text = re.sub(r'(?<!\n)(제\d+장)', r'\n\n\1', text)
+    text = re.sub(r'(?<!\n)([⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
+    text = re.sub(r'[ \t]{2,}', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+# ─────────────────────────────────────────
+# 3. PDF 로드
 # ─────────────────────────────────────────
 PDF_FILES = {
-    "관리규약":         "rules_management.pdf",
-    "주차규약":         "rules_parking.pdf",
-    "커뮤니티센터 규약": "rules_community.pdf",
+    "관리규약":         ("rules_management.pdf",  clean_management),
+    "주차규약":         ("rules_parking.pdf",      clean_parking),
+    "커뮤니티센터 규약": ("rules_community.pdf",    clean_community),
 }
 
 @st.cache_data
-def load_pdf_text(pdf_path: str) -> str:
+def load_pdf_text(pdf_path: str, cleaner_name: str) -> str:
+    """PDF에서 텍스트 추출 후 정제. cleaner_name은 캐시 키 구분용."""
+    cleaner_map = {
+        "management": clean_management,
+        "parking":    clean_parking,
+        "community":  clean_community,
+    }
+    cleaner = cleaner_map[cleaner_name]
+
     if not os.path.exists(pdf_path):
         return ""
-    text = ""
+    pages = []
     try:
         reader = PdfReader(pdf_path)
         for page in reader.pages:
-            extracted = page.extract_text()
-            if extracted:
-                text += extracted + "\n"
+            raw = page.extract_text() or ""
+            cleaned = cleaner(raw)
+            if cleaned:
+                pages.append(cleaned)
     except Exception as e:
         st.error(f"PDF 읽기 오류 ({pdf_path}): {e}")
-    return text
+    return "\n\n".join(pages)
+
+CLEANER_KEYS = {
+    "관리규약":         "management",
+    "주차규약":         "parking",
+    "커뮤니티센터 규약": "community",
+}
 
 pdf_texts: dict[str, str] = {}
-for name, path in PDF_FILES.items():
-    t = load_pdf_text(path)
+for name, (path, _) in PDF_FILES.items():
+    t = load_pdf_text(path, CLEANER_KEYS[name])
     if t:
         pdf_texts[name] = t
 
@@ -66,7 +145,7 @@ loaded_names = list(pdf_texts.keys())
 st.success(f"✅ 로드된 규약: {', '.join(loaded_names)}")
 
 # ─────────────────────────────────────────
-# 3. 검색 대상 선택
+# 4. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
 selected = st.multiselect(
@@ -74,85 +153,79 @@ selected = st.multiselect(
     options=loaded_names,
     default=loaded_names,
 )
-
 if not selected:
     st.info("검색할 규약을 하나 이상 선택해주세요.")
     st.stop()
 
-combined_text = ""
-for name in selected:
-    combined_text += f"\n\n=== [{name}] ===\n{pdf_texts[name]}"
+combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 
 # ─────────────────────────────────────────
-# 4. 모델 초기화
+# 5. AI 모델 초기화
 # ─────────────────────────────────────────
 @st.cache_resource
 def get_model():
     """사용 가능한 Gemini 모델을 우선순위대로 반환."""
+    # list_models 실패해도 fallback 동작
     try:
-        available = {m.name for m in genai.list_models()
-                     if "generateContent" in m.supported_generation_methods}
+        available = {
+            m.name for m in genai.list_models()
+            if "generateContent" in m.supported_generation_methods
+        }
     except Exception:
         available = set()
 
-    candidates = [
+    priority = [
         "models/gemini-2.0-flash-lite",
+        "models/gemini-1.5-flash-latest",
         "models/gemini-1.5-flash",
         "models/gemini-1.5-flash-8b",
     ]
-    for name in candidates:
+    # available이 비어있으면 그냥 첫 번째 후보 사용
+    for name in priority:
         if not available or name in available:
-            return genai.GenerativeModel(name.replace("models/", ""))
-    return genai.GenerativeModel("gemini-1.5-flash")
+            short = name.replace("models/", "")
+            return genai.GenerativeModel(short), short
+    return genai.GenerativeModel("gemini-1.5-flash"), "gemini-1.5-flash"
 
 # ─────────────────────────────────────────
-# 5. 조/항 단위 파싱 (목차 제외)
+# 6. 조/항 단위 파싱
 # ─────────────────────────────────────────
 ARTICLE_PATTERN = re.compile(
-    r"(제\s*\d+\s*조(?:의\s*\d+)?[\s\S]*?)(?=제\s*\d+\s*조(?:의\s*\d+)?|\Z)"
+    r"(제\s*\d+\s*조(?:의\s*\d+)?[^\n]*\n[\s\S]*?)(?=\n제\s*\d+\s*조(?:의\s*\d+)?|\Z)"
 )
 
-def is_toc_block(block: str) -> bool:
-    """목차성 블록인지 판단 — 내용이 거의 없고 짧으면 목차로 간주."""
-    lines = [l.strip() for l in block.splitlines() if l.strip()]
-    if len(lines) <= 2:
-        return True
-    # 실제 본문이 없고 조항 제목만 나열된 경우 (한 줄당 20자 미만이 대부분)
-    content_lines = lines[1:]  # 첫 줄(제목) 제외
-    if content_lines and all(len(l) < 25 for l in content_lines):
-        return True
-    return False
-
-def parse_articles(text: str) -> list[dict]:
+def parse_articles(doc_name: str, text: str) -> list[dict]:
+    """조(條) 단위로 텍스트를 파싱. 목차성 블록은 제외."""
     articles = []
     for m in ARTICLE_PATTERN.finditer(text):
         block = m.group(0).strip()
         if not block:
             continue
-        if is_toc_block(block):
-            continue  # 목차 블록 제외
-        first_line = block.splitlines()[0].strip()
-        articles.append({"title": first_line, "content": block})
+        lines = [l for l in block.splitlines() if l.strip()]
+        # 목차 필터: 줄 수가 2줄 이하 OR 실제 내용이 없는 블록
+        if len(lines) <= 2:
+            continue
+        # 목차 필터: 내용 줄이 모두 매우 짧고 점선 패턴
+        body_lines = lines[1:]
+        if body_lines and sum(1 for l in body_lines if len(l.strip()) < 20) / len(body_lines) > 0.7:
+            continue
+        title = lines[0].strip()
+        articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
 @st.cache_data
 def get_all_articles(doc_name: str, text: str) -> list[dict]:
-    arts = parse_articles(text)
-    for a in arts:
-        a["doc"] = doc_name
-    return arts
+    return parse_articles(doc_name, text)
 
 # ─────────────────────────────────────────
-# 6. 탭 구성
+# 7. 탭 구성
 # ─────────────────────────────────────────
 tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
 
 # ══════════════════════════════════════════
-# TAB A — 키워드 검색 (조/항 단위 + AI 요약)
+# TAB A — 키워드 검색
 # ══════════════════════════════════════════
 with tab_keyword:
-    st.subheader("키워드 검색")
-
     col1, col2 = st.columns([4, 1])
     with col1:
         keyword = st.text_input(
@@ -164,48 +237,47 @@ with tab_keyword:
 
     if keyword:
         keyword_lower = keyword.lower()
-        matched_articles: list[dict] = []
+        matched: list[dict] = []
 
         for doc_name in selected:
             articles = get_all_articles(doc_name, pdf_texts[doc_name])
 
-            # 조항 파싱이 안 된 PDF는 라인 기반 fallback
-            if not articles:
+            if articles:
+                for art in articles:
+                    if keyword_lower in art["content"].lower():
+                        matched.append(art)
+            else:
+                # 조항 파싱이 안 된 경우 라인 기반 fallback
                 lines = pdf_texts[doc_name].splitlines()
                 for i, line in enumerate(lines):
                     if keyword_lower in line.lower():
                         start = max(0, i - 2)
-                        end   = min(len(lines), i + 4)
-                        block = "\n".join(lines[start:end])
-                        matched_articles.append({
-                            "doc": doc_name,
-                            "title": f"{i+1}번째 줄",
-                            "content": block,
-                        })
-            else:
-                for art in articles:
-                    if keyword_lower in art["content"].lower():
-                        matched_articles.append(art)
+                        end   = min(len(lines), i + 5)
+                        block = "\n".join(lines[start:end]).strip()
+                        if block:
+                            matched.append({
+                                "doc": doc_name,
+                                "title": f"{i+1}번째 줄 근처",
+                                "content": block,
+                            })
 
-        if not matched_articles:
-            st.warning(f"'{keyword}'에 해당하는 조항을 찾지 못했습니다.")
+        if not matched:
+            st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
         else:
-            st.success(f"총 **{len(matched_articles)}개** 조항 발견")
+            st.success(f"총 **{len(matched)}개** 조항 발견")
 
-            # ── AI 요약 ──────────────────────────
+            # AI 요약
             if use_ai_summary and api_ready:
-                summary_context = "\n\n".join(
-                    f"[{a['doc']}] {a['content']}" for a in matched_articles
+                ctx = "\n\n".join(f"[{a['doc']}]\n{a['content']}" for a in matched)
+                prompt = (
+                    f"아파트 규약에서 '{keyword}' 키워드로 검색된 조항들이야.\n"
+                    f"핵심 내용을 3~5줄로 간결하게 요약해줘. 규약 이름과 조항 번호를 반드시 포함해줘.\n\n"
+                    f"{ctx}"
                 )
-                summary_prompt = f"""
-아래는 아파트 규약에서 '{keyword}' 키워드로 검색된 조항들이야.
-핵심 내용을 3~5줄로 간결하게 요약해줘. 규약 이름과 조항 번호를 반드시 포함해줘.
-
-{summary_context}
-"""
                 with st.spinner("AI가 검색 결과를 요약하는 중..."):
                     try:
-                        resp = get_model().generate_content(summary_prompt)
+                        model, model_name = get_model()
+                        resp = model.generate_content(prompt)
                         if resp.text:
                             with st.container(border=True):
                                 st.markdown("#### 🤖 AI 요약")
@@ -215,8 +287,9 @@ with tab_keyword:
 
             st.divider()
 
-            # ── 조항별 expander ──────────────────
-            for art in matched_articles:
+            # 조항별 expander
+            for art in matched:
+                # 키워드 하이라이트
                 highlighted = re.sub(
                     f"(?i)({re.escape(keyword)})",
                     r"**:orange[\1]**",
@@ -226,11 +299,9 @@ with tab_keyword:
                     st.markdown(highlighted)
 
 # ══════════════════════════════════════════
-# TAB B — AI 질문 검색 (관련 조항 원문 포함)
+# TAB B — AI 질문 검색
 # ══════════════════════════════════════════
 with tab_ai:
-    st.subheader("AI 질문 검색")
-
     if not api_ready:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
@@ -238,7 +309,6 @@ with tab_ai:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # 대화 기록 표시
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -246,10 +316,10 @@ with tab_ai:
                 with st.expander("📋 관련 조항 원문 보기"):
                     for art in msg["articles"]:
                         st.markdown(f"**[{art['doc']}] {art['title']}**")
-                        st.caption(art["content"])
+                        st.code(art["content"], language=None)
                         st.divider()
 
-    if prompt := st.chat_input("질문을 입력하세요  (예: 관리위원회 구성 요건이 뭐야?)"):
+    if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -257,50 +327,50 @@ with tab_ai:
         with st.chat_message("assistant"):
             with st.spinner("규약 전문을 검토 중입니다..."):
                 try:
-                    full_prompt = f"""
-너는 아파트 규약 전문 AI 비서야.
+                    model, model_name = get_model()
+                    full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
 아래 [규약 전문]을 꼼꼼히 읽고 [질문]에 대해 규약에 근거하여 정확하고 친절하게 답변해줘.
 
-답변 형식을 반드시 지켜줘:
-1. 핵심 답변을 먼저 간결하게 (3줄 이내)
-2. 근거 조항: 규약명과 조항 번호 명시 (예: 관리규약 제15조 제2항)
+답변 형식:
+1. 핵심 답변 (3줄 이내로 간결하게)
+2. 근거 조항: 규약명 + 조항 번호 명시 (예: 주차규약 제20조 제7항)
 3. 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고 답해줘
 
 [규약 전문]
 {combined_text}
 
 [질문]
-{prompt}
-"""
-                    response = get_model().generate_content(full_prompt)
+{prompt}"""
+
+                    response = model.generate_content(full_prompt)
 
                     if response.text:
                         st.markdown(response.text)
 
-                        # AI 답변에서 언급된 조항 원문 자동 첨부
-                        all_articles = []
+                        # 답변에서 언급된 조항 번호 추출 → 원문 첨부
+                        all_arts = []
                         for doc_name in selected:
-                            all_articles += get_all_articles(doc_name, pdf_texts[doc_name])
+                            all_arts += get_all_articles(doc_name, pdf_texts[doc_name])
 
-                        mentioned_nums = set(re.findall(r"제\s*(\d+)\s*조", response.text))
-                        related_arts = []
-                        for num in mentioned_nums:
+                        mentioned = set(re.findall(r"제\s*(\d+)\s*조", response.text))
+                        related = []
+                        for num in mentioned:
                             pat = re.compile(rf"제\s*{num}\s*조")
-                            for art in all_articles:
-                                if pat.search(art["title"]) and art not in related_arts:
-                                    related_arts.append(art)
+                            for art in all_arts:
+                                if pat.search(art["title"]) and art not in related:
+                                    related.append(art)
 
-                        if related_arts:
+                        if related:
                             with st.expander("📋 관련 조항 원문 보기"):
-                                for art in related_arts:
+                                for art in related:
                                     st.markdown(f"**[{art['doc']}] {art['title']}**")
-                                    st.caption(art["content"])
+                                    st.code(art["content"], language=None)
                                     st.divider()
 
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": response.text,
-                            "articles": related_arts,
+                            "articles": related,
                         })
                     else:
                         st.error("답변을 생성하지 못했습니다.")
