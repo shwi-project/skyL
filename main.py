@@ -337,22 +337,11 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    for k in ("ai_question", "ai_response", "ai_articles", "ai_loading"):
+    for k in ("ai_question", "ai_response", "ai_articles"):
         if k not in st.session_state:
             st.session_state[k] = None if k != "ai_articles" else []
 
-    prompt = st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)")
-
-    # 로딩 중이거나 새 질문이 들어오면 이전 답변 숨기기
-    if prompt or st.session_state.ai_loading:
-        st.markdown("""<style>
-div[data-testid="stChatMessageContent"] p { display:none }
-div[data-testid="stChatMessageContent"] { display:none }
-div[data-testid="stExpander"] { display:none }
-</style>""", unsafe_allow_html=True)
-
-    if prompt:
-        st.session_state.ai_loading = True
+    if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         with st.chat_message("user"):
             st.markdown(prompt)
         with st.chat_message("assistant"):
@@ -386,10 +375,8 @@ div[data-testid="stExpander"] { display:none }
                     st.session_state.ai_question = prompt
                     st.session_state.ai_response = response_text
                     st.session_state.ai_articles = related
-                    st.session_state.ai_loading = False
 
                 except Exception as e:
-                    st.session_state.ai_loading = False
                     st.error(f"❌ 오류 발생: {e}")
 
     elif st.session_state.ai_question:
