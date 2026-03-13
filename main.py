@@ -12,6 +12,21 @@ import streamlit as st
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+/* 폰트 전체 적용 */
+html, body, [class*="css"], [data-testid] {
+    font-family: 'Noto Sans KR', sans-serif !important;
+}
+
+/* 타이틀 아래 여백 축소 */
+.main .block-container { padding-top: 1rem !important; }
+hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
+</style>
+""", unsafe_allow_html=True)
+
 # 헤더
 try:
     with open("logo.png", "rb") as f:
