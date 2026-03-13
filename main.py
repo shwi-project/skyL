@@ -37,6 +37,20 @@ st.markdown("""
     line-height: 1.7 !important;
 }
 
+/* 채팅 메시지 줄간격 */
+[data-testid="stChatMessage"] li {
+    margin-bottom: 0 !important;
+    line-height: 1.6 !important;
+}
+[data-testid="stChatMessage"] ul,
+[data-testid="stChatMessage"] ol {
+    margin-top: 0.2rem !important;
+    margin-bottom: 0.2rem !important;
+}
+[data-testid="stChatMessage"] p {
+    margin-bottom: 0.3rem !important;
+}
+
 /* 채팅 아바타 크기 축소 */
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
@@ -435,7 +449,7 @@ with tab_ai:
                         f"[규약 전문]\n{combined_text}\n\n"
                         f"[질문]\n{prompt}\n\n"
                         "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
-                        "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 보기 좋게 정리해서 답변\n"
+                        "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
                         "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 근거 명시 (필수):\n"
                         "   - 조항인 경우: 📌 관리규약 제N조 또는 📌 주차규약 제N조 또는 📌 커뮤니티센터 규약 제N조\n"
                         "   - 별표인 경우: 📌 주차규약 별표 N\n"
