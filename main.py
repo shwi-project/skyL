@@ -26,6 +26,17 @@ st.markdown("""
     font-family: 'Noto Sans KR', sans-serif !important;
 }
 
+/* 규약 선택 버튼 텍스트 크기 */
+[data-testid="stButton"] button p {
+    font-size: 0.82rem !important;
+}
+
+/* AI 채팅 메시지 텍스트 크기 */
+[data-testid="stChatMessage"] p {
+    font-size: 0.85rem !important;
+    line-height: 1.7 !important;
+}
+
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
@@ -124,7 +135,7 @@ for i, doc in enumerate(DOC_ORDER):
             type="primary" if is_active else "secondary",
         ):
             st.session_state.selected_doc = doc
-            st.session_state["keyword_input"] = ""
+            st.session_state["_keyword_clear"] = True
             st.rerun()
 
 selected = st.session_state.selected_doc
@@ -346,9 +357,11 @@ tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 with tab_keyword:
     col1, col2 = st.columns([4, 1])
     with col1:
+        _clear = st.session_state.pop("_keyword_clear", False)
         keyword = st.text_input(
             "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
             label_visibility="collapsed", key="keyword_input",
+            value="" if _clear else st.session_state.get("keyword_input", ""),
         )
     with col2:
         use_ai = st.toggle("AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
