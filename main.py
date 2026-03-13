@@ -7,23 +7,27 @@ from pypdf import PdfReader
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-from PIL import Image as _Image
+import base64 as _b64
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
-# 헤더: 로고 + 타이틀
-_col_logo, _col_title = st.columns([1, 10])
-with _col_logo:
-    try:
-        _logo = _Image.open("logo.png")
-        st.image(_logo, width=48)
-    except Exception:
-        st.write("🏰")
-with _col_title:
-    st.markdown(
-        "<h3 style='margin:0;padding-top:6px;line-height:1.3'>롯데캐슬스카이엘 규약 통합 검색</h3>"
-        "<p style='margin:0;font-size:0.85rem;color:#888'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</p>",
-        unsafe_allow_html=True
-    )
+# 헤더: 로고 + 타이틀 (HTML로 한 줄 배치, 클릭 불가)
+try:
+    with open("logo.png", "rb") as _f:
+        _logo_b64 = _b64.b64encode(_f.read()).decode()
+    _logo_html = f"<img src='data:image/png;base64,{_logo_b64}' style='width:36px;height:36px;object-fit:contain;vertical-align:middle;margin-right:10px;pointer-events:none;'>"
+except Exception:
+    _logo_html = "<span style='font-size:1.4rem;vertical-align:middle;margin-right:8px'>🏰</span>"
+
+st.markdown(
+    f"""<div style='display:flex;align-items:center;margin-bottom:4px'>
+    {_logo_html}
+    <div>
+      <span style='font-size:1.1rem;font-weight:700;line-height:1.3'>롯데캐슬스카이엘 규약 통합 검색</span><br>
+      <span style='font-size:0.8rem;color:#888'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</span>
+    </div>
+    </div>""",
+    unsafe_allow_html=True
+)
 
 with st.expander("🔧 사용 가능한 모델 목록 확인"):
     if st.button("모델 조회"):
@@ -71,8 +75,13 @@ def clean_management(text: str) -> str:
     text = re.sub(r'-\s*\d+\s*-\n?', '', text)
     # 남은 【 】 괄호 제거
     text = re.sub(r'【[^】]*】', '', text)
-    # ①②③ 등 항번호 앞에 줄바꿈
+    # ①②③ 등 항번호 앞에 줄바꿈 (단독 줄로 분리)
     text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
+    # 항번호 뒤 모든 공백/줄바꿈 → 단일 공백으로 (①\n\n함한다 → ① 함한다)
+    text = re.sub(r'([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])[\s\n]+', r'\1 ', text)
+    # 문장 중간에 끊긴 줄바꿈 합치기
+    # 줄 끝이 조사/어미로 끝나지 않고 다음 줄이 소문자/한글로 이어지면 합치기
+    text = re.sub(r'([가-힣a-zA-Z0-9,])\n([가-힣a-zA-Z0-9\(])', r'\1 \2', text)
     # 과도한 공백 정리
     text = re.sub(r'[ \t]{3,}', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
@@ -117,7 +126,7 @@ PDF_FILES = {
 }
 
 @st.cache_data(show_spinner=False)
-def load_pdf_text(pdf_path: str, cleaner_name: str, _version: int = 4) -> str:
+def load_pdf_text(pdf_path: str, cleaner_name: str, _version: int = 6) -> str:
     """PDF에서 텍스트 추출 후 정제. _version 변경 시 캐시 무효화."""
     cleaner_map = {
         "management": clean_management,
@@ -133,12 +142,14 @@ def load_pdf_text(pdf_path: str, cleaner_name: str, _version: int = 4) -> str:
         reader = PdfReader(pdf_path)
         for page in reader.pages:
             raw = page.extract_text() or ""
-            cleaned = cleaner(raw)
-            if cleaned:
-                pages.append(cleaned)
+            # 목차 페이지만 먼저 걸러내고 raw 텍스트 수집
+            if not is_toc_page(raw):
+                pages.append(raw)
     except Exception as e:
         st.error(f"PDF 읽기 오류 ({pdf_path}): {e}")
-    return "\n\n".join(pages)
+    # 전체 합친 후 정제 (페이지 경계 줄바꿈 문제 해결)
+    full_raw = "\n".join(pages)
+    return cleaner(full_raw)
 
 CLEANER_KEYS = {
     "관리규약":         "management",
@@ -257,7 +268,7 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
     return articles
 
 @st.cache_data(show_spinner=False)
-def get_all_articles(doc_name: str, text: str, _version: int = 4) -> list[dict]:
+def get_all_articles(doc_name: str, text: str, _version: int = 6) -> list[dict]:
     return parse_articles(doc_name, text)
 
 # ─────────────────────────────────────────
