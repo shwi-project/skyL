@@ -93,12 +93,14 @@ loaded_names = list(pdf_texts.keys())
 # 3. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
-selected = st.multiselect("📋 검색할 규약 선택", options=loaded_names, default=loaded_names)
-if not selected:
-    st.info("검색할 규약을 하나 이상 선택해주세요.")
-    st.stop()
-
-combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
+selected = st.radio(
+    "📋 검색할 규약 선택",
+    options=["전체"] + loaded_names,
+    horizontal=True,
+    label_visibility="visible",
+)
+selected_names = loaded_names if selected == "전체" else [selected]
+combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected_names)
 
 # ─────────────────────────────────────────
 # 4. Gemini AI
@@ -313,7 +315,7 @@ def render_article_card(art: dict, keyword: str = "") -> None:
 # ─────────────────────────────────────────
 # 8. 탭 구성
 # ─────────────────────────────────────────
-tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
+tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✴ AI 질문 검색"])
 
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
@@ -331,7 +333,7 @@ with tab_keyword:
     if keyword:
         kw = keyword.lower()
         matched: list[dict] = []
-        for doc_name in selected:
+        for doc_name in selected_names:
             arts = get_articles(doc_name, pdf_texts[doc_name])
             matched.extend(a for a in arts if kw in a["title"].lower())
             matched.extend(a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower())
@@ -403,7 +405,7 @@ with tab_ai:
                     st.markdown(response_text)
 
                     all_arts = []
-                    for dn in selected:
+                    for dn in selected_names:
                         all_arts += get_articles(dn, pdf_texts[dn])
                     related = find_related_articles(response_text, all_arts)
                     if related:
