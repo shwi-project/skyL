@@ -224,8 +224,13 @@ def extract_pairs(txt: str) -> list[tuple]:
 def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict]:
     related   = []
     seen_keys = set()
+
+    # 📌 이후 텍스트만 파싱 (근거 부분만 처리)
+    anchor_text = " ".join(re.findall(r"📌\s*([^\n]+)", response_text))
+    search_text = anchor_text if anchor_text else response_text
+
     # 제N조 매칭
-    for doc_name, num in extract_pairs(response_text):
+    for doc_name, num in extract_pairs(search_text):
         key = (doc_name, num)
         if key in seen_keys:
             continue
@@ -235,22 +240,32 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
             if art["doc"] == doc_name and pat.search(art["title"]):
                 related.append(art)
                 break
+
     # 첨부 #N 매칭
     attach_pat = re.compile(r"첨부\s*#(\d+)")
-    for am in attach_pat.finditer(response_text):
+    for am in attach_pat.finditer(search_text):
         attach_title = f"첨부 #{am.group(1)}"
         for art in all_arts:
             if attach_title in art["title"] and art not in related:
                 related.append(art)
                 break
-    # 별표N 매칭
-    byulpyo_pat = re.compile(r"별표\s*(\d+)")
-    for bm in byulpyo_pat.finditer(response_text):
-        num = bm.group(1)
+
+    # 별표N 매칭 — doc_name도 함께 파악
+    byulpyo_pat = re.compile(
+        r"(관리규약|주차규약|커뮤니티센터\s*규약).*?별표\s*(\d+)"
+        r"|별표\s*(\d+)"
+    )
+    for bm in byulpyo_pat.finditer(search_text):
+        raw_doc = (bm.group(1) or "").strip()
+        num = bm.group(2) or bm.group(3)
+        doc_name = classify_doc(raw_doc) if raw_doc else None
         for art in all_arts:
+            if doc_name and art["doc"] != doc_name:
+                continue
             if re.search(rf"별표\s*{num}", art["title"]) and art not in related:
                 related.append(art)
                 break
+
     return related
 
 # ─────────────────────────────────────────
@@ -362,13 +377,14 @@ with tab_ai:
                         f"[질문]\n{prompt}\n\n"
                         "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
                         "1. 형식 레이블 없이 자연스럽게 답변\n"
-                        "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 근거 조항 명시 (필수):\n"
-                        "   📌 관리규약 제N조\n"
-                        "   또는 📌 주차규약 제N조\n"
-                        "   또는 📌 커뮤니티센터 규약 제N조\n"
+                        "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 근거 명시 (필수):\n"
+                        "   - 조항인 경우: 📌 관리규약 제N조 또는 📌 주차규약 제N조 또는 📌 커뮤니티센터 규약 제N조\n"
+                        "   - 별표인 경우: 📌 주차규약 별표 N\n"
+                        "   - 첨부인 경우: 📌 커뮤니티센터 규약 첨부 #N\n"
                         "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
-                        "4. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
-                        "근거 조항 없이 답변을 끝내지 마시오."
+                        "4. 근거 뒤에 항목번호(가., ①, ② 등)는 붙이지 마시오\n"
+                        "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
+                        "근거 없이 답변을 끝내지 마시오."
                     )
                     response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
                     st.markdown(response_text)
