@@ -329,10 +329,14 @@ with tab_ai:
 
     # 입력창
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
-        # 이전 답변 초기화
         st.session_state.ai_question = None
         st.session_state.ai_response = None
         st.session_state.ai_articles = []
+        st.session_state["_pending"] = prompt
+        st.rerun()
+
+    if st.session_state.get("_pending"):
+        prompt = st.session_state.pop("_pending")
 
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -358,6 +362,11 @@ with tab_ai:
                         all_arts += get_articles(dn, pdf_texts[dn])
 
                     related = find_related_articles(response_text, all_arts)
+
+                    # 디버그: 매칭 실패 시 원인 표시 (나중에 제거)
+                    pairs = extract_pairs(response_text)
+                    if not related and pairs:
+                        st.caption(f"⚠️ 추출된 조항: {pairs} / 전체 조항 수: {len(all_arts)}")
 
                     if related:
                         with st.expander("📋 관련 조항 원문 보기", expanded=False):
