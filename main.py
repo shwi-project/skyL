@@ -14,11 +14,22 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
 
-/* 폰트 전체 적용 */
-html, body, [class*="css"], [data-testid] {
+/* 타이틀 제외한 본문 폰트 */
+p, li, span, div, label, input, textarea, button,
+[data-testid="stMarkdownContainer"],
+[data-testid="stChatInput"],
+[data-testid="stChatMessage"] {
     font-family: 'Noto Sans KR', sans-serif !important;
+}
+
+/* expander 아이콘 텍스트 깨짐 방지 */
+[data-testid="stExpander"] summary span {
+    font-family: 'Noto Sans KR', sans-serif !important;
+}
+[data-testid="stExpander"] summary svg {
+    flex-shrink: 0;
 }
 
 /* 타이틀 아래 여백 축소 */
@@ -426,7 +437,7 @@ with tab_ai:
                         all_arts += get_articles(dn, pdf_texts[dn])
                     related = find_related_articles(response_text, all_arts)
                     if related:
-                        with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                        with st.expander("관련 조항 원문 보기", expanded=False):
                             for art in related:
                                 render_article_card(art)
 
@@ -443,6 +454,6 @@ with tab_ai:
         with st.chat_message("assistant"):
             st.markdown(st.session_state.ai_response)
             if st.session_state.ai_articles:
-                with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                with st.expander("관련 조항 원문 보기", expanded=False):
                     for art in st.session_state.ai_articles:
                         render_article_card(art)
