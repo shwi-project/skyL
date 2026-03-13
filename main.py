@@ -337,24 +337,12 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # session_state 초기화
     if "ai_question" not in st.session_state:
-        st.session_state.ai_question  = None
-        st.session_state.ai_response  = None
-        st.session_state.ai_articles  = []
+        st.session_state.ai_question = None
+        st.session_state.ai_response = None
+        st.session_state.ai_articles = []
 
-    # 이전 답변 표시
-    if st.session_state.ai_question:
-        with st.chat_message("user"):
-            st.markdown(st.session_state.ai_question)
-        with st.chat_message("assistant"):
-            st.markdown(st.session_state.ai_response)
-            if st.session_state.ai_articles:
-                with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                    for art in st.session_state.ai_articles:
-                        render_article_card(art)
-
-    # 입력창
+    # ── STEP 1: 새 질문 입력 → 초기화 후 rerun ──
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.ai_question = None
         st.session_state.ai_response = None
@@ -362,7 +350,8 @@ with tab_ai:
         st.session_state["_pending"] = prompt
         st.rerun()
 
-    if st.session_state.get("_pending"):
+    # ── STEP 2: rerun 후 → 빈 화면에서 AI 호출 ──
+    elif st.session_state.get("_pending"):
         prompt = st.session_state.pop("_pending")
 
         with st.chat_message("user"):
@@ -376,16 +365,14 @@ with tab_ai:
                         f"[질문]\n{prompt}\n\n"
                         "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
                         "1. 형식 레이블 없이 자연스럽게 답변\n"
-                        "2. 답변 마지막 줄에 반드시 아래 형식으로 근거 조항 명시 (필수):\n"
+                        "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 근거 조항 명시 (필수):\n"
                         "   📌 관리규약 제N조\n"
                         "   또는 📌 주차규약 제N조\n"
                         "   또는 📌 커뮤니티센터 규약 제N조\n"
                         "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
                         "4. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
-                        "- 📌 근거 조항은 반드시 답변 마지막에 빈 줄 하나 띄운 뒤 새 줄에 써줘\n"
                         "근거 조항 없이 답변을 끝내지 마시오."
                     )
-                    # 📌 앞에 빈 줄 강제 (마크다운 줄바꿈 보장)
                     response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
                     st.markdown(response_text)
 
@@ -400,10 +387,20 @@ with tab_ai:
                             for art in related:
                                 render_article_card(art)
 
-                    # 저장
                     st.session_state.ai_question = prompt
                     st.session_state.ai_response = response_text
                     st.session_state.ai_articles = related
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
+
+    # ── STEP 3: 저장된 답변 표시 ──
+    elif st.session_state.ai_question:
+        with st.chat_message("user"):
+            st.markdown(st.session_state.ai_question)
+        with st.chat_message("assistant"):
+            st.markdown(st.session_state.ai_response)
+            if st.session_state.ai_articles:
+                with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                    for art in st.session_state.ai_articles:
+                        render_article_card(art)
