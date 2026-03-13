@@ -87,12 +87,26 @@ loaded_names = list(pdf_texts.keys())
 # 3. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
-selected = st.radio(
-    "📋 검색할 규약 선택",
-    options=loaded_names,
-    horizontal=True,
-    label_visibility="visible",
-)
+# 규약 선택 버튼 (순서 고정)
+DOC_ORDER = [n for n in ["주차규약", "커뮤니티센터 규약", "관리규약"] if n in pdf_texts]
+
+if "selected_doc" not in st.session_state or st.session_state.selected_doc not in DOC_ORDER:
+    st.session_state.selected_doc = DOC_ORDER[0]
+
+cols = st.columns(len(DOC_ORDER))
+for i, doc in enumerate(DOC_ORDER):
+    with cols[i]:
+        is_active = st.session_state.selected_doc == doc
+        if st.button(
+            doc,
+            key=f"doc_btn_{doc}",
+            use_container_width=True,
+            type="primary" if is_active else "secondary",
+        ):
+            st.session_state.selected_doc = doc
+            st.rerun()
+
+selected = st.session_state.selected_doc
 selected_names = [selected]
 combined_text = f"=== [{selected}] ===\n{pdf_texts[selected]}"
 
