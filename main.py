@@ -51,12 +51,14 @@ st.markdown("""
     margin-bottom: 0.3rem !important;
 }
 
-/* 채팅 아바타 크기 축소 */
+/* 채팅 아바타 크기 및 정렬 */
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
     width: 20px !important;
     height: 20px !important;
     min-width: 20px !important;
+    margin-top: 2px !important;
+    align-self: flex-start !important;
 }
 
 /* 타이틀 아래 여백 축소 */
@@ -467,7 +469,7 @@ with tab_ai:
                         "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
                         "근거 없이 답변을 끝내지 마시오."
                     )
-                    response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n---\n\2", response_text)
                     st.markdown(response_text)
 
                     all_arts = []
