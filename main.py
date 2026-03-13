@@ -11,17 +11,6 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 st.title("🦅🏰 롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
-# ── 디버그: 사용 가능한 모델 확인 (확인 후 삭제 예정) ──
-with st.expander("🔧 사용 가능한 모델 확인 (클릭)"):
-    if st.button("모델 목록 조회"):
-        try:
-            import google.generativeai as _genai
-            _genai.configure(api_key=st.secrets.get("GOOGLE_API_KEY", ""))
-            models = [m.name for m in _genai.list_models() if "generateContent" in m.supported_generation_methods]
-            st.write(models)
-        except Exception as e:
-            st.error(f"조회 실패: {e}")
-
 # ─────────────────────────────────────────
 # 1. API 키 설정
 # ─────────────────────────────────────────
@@ -281,24 +270,55 @@ with tab_keyword:
                     try:
                         result = ai_generate(prompt)
                         if result:
-                            with st.container(border=True):
-                                st.markdown("#### 🤖 AI 요약")
-                                st.markdown(result)
+                            st.html(f"""
+<div style='background:linear-gradient(135deg,#f0f7ff,#e8f4fd);
+            border-left:4px solid #1a6ebd;border-radius:0 10px 10px 0;
+            padding:16px 20px;margin-bottom:8px'>
+  <div style='font-weight:700;color:#1a6ebd;font-size:1rem;margin-bottom:8px'>
+    🤖 AI 요약
+  </div>
+  <div style='font-size:0.9rem;color:#333;line-height:1.8;white-space:pre-wrap'>{result}</div>
+</div>""")
                     except Exception as e:
                         st.warning(f"AI 요약 실패: {e}")
 
             st.divider()
 
-            # 조항별 expander
+            # 조항별 카드 표시
+            DOC_COLORS = {
+                "관리규약":         "#1a6ebd",
+                "주차규약":         "#2e8b57",
+                "커뮤니티센터 규약": "#8b4513",
+            }
             for art in matched:
-                # 키워드 하이라이트
                 highlighted = re.sub(
                     f"(?i)({re.escape(keyword)})",
-                    r"**:orange[\1]**",
+                    r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
                     art["content"],
                 )
-                with st.expander(f"📄 [{art['doc']}]  {art['title']}", expanded=False):
-                    st.markdown(highlighted)
+                badge_color = DOC_COLORS.get(art["doc"], "#555")
+                badge = (
+                    f"<span style='background:{badge_color};color:white;"
+                    f"padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600'>"
+                    f"{art['doc']}</span>"
+                )
+                title_html = (
+                    f"<span style='font-size:1rem;font-weight:700;color:#222'>"
+                    f"{art['title']}</span>"
+                )
+                body_html = (
+                    "<div style='font-size:0.88rem;color:#333;line-height:1.7;"
+                    "white-space:pre-wrap;margin-top:8px'>"
+                    + highlighted + "</div>"
+                )
+                card_html = f"""
+<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
+            margin-bottom:12px;background:#fafafa;
+            box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
+  <div style='margin-bottom:6px'>{badge}&nbsp;&nbsp;{title_html}</div>
+  {body_html}
+</div>"""
+                st.html(card_html)
 
 # ══════════════════════════════════════════
 # TAB B — AI 질문 검색
@@ -315,11 +335,24 @@ with tab_ai:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if msg.get("articles"):
-                with st.expander("📋 관련 조항 원문 보기"):
+                with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                    DOC_COLORS3 = {
+                        "관리규약": "#1a6ebd",
+                        "주차규약": "#2e8b57",
+                        "커뮤니티센터 규약": "#8b4513",
+                    }
                     for art in msg["articles"]:
-                        st.markdown(f"**[{art['doc']}] {art['title']}**")
-                        st.code(art["content"], language=None)
-                        st.divider()
+                        bc = DOC_COLORS3.get(art["doc"], "#555")
+                        st.html(f"""
+<div style='border:1px solid #e0e0e0;border-radius:10px;padding:14px 18px;
+            margin-bottom:10px;background:#fafafa'>
+  <div style='margin-bottom:6px'>
+    <span style='background:{bc};color:white;padding:2px 8px;
+                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
+    &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
+  </div>
+  <div style='font-size:0.85rem;color:#444;line-height:1.7;white-space:pre-wrap'>{art["content"]}</div>
+</div>""")
 
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -362,11 +395,24 @@ with tab_ai:
                                     related.append(art)
 
                         if related:
-                            with st.expander("📋 관련 조항 원문 보기"):
+                            with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                                DOC_COLORS2 = {
+                                    "관리규약": "#1a6ebd",
+                                    "주차규약": "#2e8b57",
+                                    "커뮤니티센터 규약": "#8b4513",
+                                }
                                 for art in related:
-                                    st.markdown(f"**[{art['doc']}] {art['title']}**")
-                                    st.code(art["content"], language=None)
-                                    st.divider()
+                                    bc = DOC_COLORS2.get(art["doc"], "#555")
+                                    st.html(f"""
+<div style='border:1px solid #e0e0e0;border-radius:10px;padding:14px 18px;
+            margin-bottom:10px;background:#fafafa'>
+  <div style='margin-bottom:6px'>
+    <span style='background:{bc};color:white;padding:2px 8px;
+                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
+    &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
+  </div>
+  <div style='font-size:0.85rem;color:#444;line-height:1.7;white-space:pre-wrap'>{art["content"]}</div>
+</div>""")
 
                         st.session_state.messages.append({
                             "role": "assistant",
