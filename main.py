@@ -337,11 +337,10 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    for k in ("ai_question", "ai_response", "ai_articles", "_ai_running", "_ai_pending"):
+    for k in ("ai_question", "ai_response", "ai_articles", "_ai_pending"):
         if k not in st.session_state:
             st.session_state[k] = None if k != "ai_articles" else []
 
-    # ── 입력 받으면: 상태 초기화 + pending 저장 + rerun ──
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.ai_question = None
         st.session_state.ai_response = None
@@ -349,10 +348,13 @@ with tab_ai:
         st.session_state["_ai_pending"] = prompt
         st.rerun()
 
-    # ── rerun 후: pending 있으면 AI 호출 (화면은 이미 깨끗) ──
+    # rerun 후 이 시점엔 ai_question=None, _ai_pending=있음
+    # → 아래 elif 조건 모두 False → 화면에 아무것도 없음
     if st.session_state["_ai_pending"]:
-        prompt = st.session_state["_ai_pending"]
+        prompt = st.session_state.pop("_ai_pending")
         st.session_state["_ai_pending"] = None
+
+        st.caption(f"🔍 디버그: pending={prompt!r}, ai_question={st.session_state.ai_question!r}")
 
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -392,7 +394,6 @@ with tab_ai:
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
 
-    # ── 저장된 답변 표시 (pending도 없고 새 입력도 없을 때) ──
     elif st.session_state.ai_question:
         with st.chat_message("user"):
             st.markdown(st.session_state.ai_question)
