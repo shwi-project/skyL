@@ -15,128 +15,87 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 # ── 글로벌 CSS ──
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important; }
 
-/* 배경 */
-[data-testid="stAppViewContainer"] {
-    background: #111318 !important;
-}
+/* 배경 및 기본 컨테이너 */
+[data-testid="stAppViewContainer"] { background: #0e1015 !important; }
 [data-testid="stHeader"] { background: transparent !important; }
-.main .block-container { max-width: 860px; padding: 2rem 2rem 5rem; }
+.main .block-container { max-width: 820px; padding: 2.5rem 2rem 5rem; }
+hr { border-color: #1f232b !important; margin: 2rem 0 !important; }
 
-/* 구분선 */
-hr { border-color: #2a2d35 !important; }
-
-/* multiselect 레이블 */
-[data-testid="stMultiSelect"] label {
-    color: #6b7280 !important;
-    font-size: 0.72rem !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
+/* 멀티셀렉트 & 토글 & 텍스트 */
+[data-testid="stMultiSelect"] label, [data-testid="stToggle"] label {
+    color: #8b95a5 !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
 }
-/* multiselect 박스 */
 [data-baseweb="select"] > div {
-    background: #1a1d24 !important;
-    border: 1px solid #2a2d35 !important;
-    border-radius: 10px !important;
+    background: #15181e !important;
+    border: 1px solid #262a33 !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease;
 }
-/* 태그 */
+[data-baseweb="select"] > div:hover { border-color: #3b82f6 !important; }
 [data-baseweb="tag"] {
-    background: #1e3a5f !important;
+    background: rgba(59, 130, 246, 0.1) !important;
     color: #60a5fa !important;
     border-radius: 6px !important;
-    border: none !important;
-    font-size: 0.78rem !important;
-    font-weight: 500 !important;
+    padding: 0 8px !important;
 }
 
-/* 탭 */
+/* 세련된 탭 디자인 */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid #2a2d35 !important;
-    gap: 4px !important;
+    border-bottom: 1px solid #1f232b !important;
+    gap: 1.5rem !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    color: #4b5563 !important;
-    font-size: 0.82rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.03em !important;
-    padding: 0.65rem 1.2rem !important;
+    color: #64748b !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    padding: 0.8rem 0.2rem !important;
     background: transparent !important;
-    border-radius: 8px 8px 0 0 !important;
-    transition: color 0.2s !important;
+    border: none !important;
 }
 [data-testid="stTabs"] [aria-selected="true"] {
-    color: #f9fafb !important;
-    background: rgba(255,255,255,0.04) !important;
+    color: #e2e8f0 !important;
     border-bottom: 2px solid #3b82f6 !important;
 }
 
-/* 텍스트 입력 */
-[data-testid="stTextInput"] input,
-[data-testid="stChatInput"] textarea {
-    background: #1a1d24 !important;
-    border: 1px solid #2a2d35 !important;
-    border-radius: 10px !important;
-    color: #f3f4f6 !important;
-    font-size: 0.88rem !important;
+/* 입력창 및 채팅창 */
+[data-testid="stTextInput"] input, [data-testid="stChatInput"] textarea {
+    background: #15181e !important;
+    border: 1px solid #262a33 !important;
+    border-radius: 8px !important;
+    color: #f1f5f9 !important;
+    padding: 0.75rem 1rem !important;
 }
-[data-testid="stTextInput"] input:focus,
-[data-testid="stChatInput"] textarea:focus {
+[data-testid="stTextInput"] input:focus, [data-testid="stChatInput"] textarea:focus {
     border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
 }
-
-/* 채팅 전송 버튼 */
 [data-testid="stChatInput"] button {
     background: #3b82f6 !important;
-    border-radius: 8px !important;
-    transition: background 0.2s !important;
-}
-[data-testid="stChatInput"] button:hover {
-    background: #2563eb !important;
+    border-radius: 6px !important;
 }
 
-/* 채팅 메시지 */
+/* 채팅 메시지 & Expander */
 [data-testid="stChatMessage"] {
-    background: #16191f !important;
-    border: 1px solid #22252e !important;
-    border-radius: 14px !important;
-    margin-bottom: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0.5rem 0 !important;
 }
-
-/* expander */
 [data-testid="stExpander"] {
-    background: #16191f !important;
-    border: 1px solid #22252e !important;
-    border-radius: 10px !important;
+    background: #15181e !important;
+    border: 1px solid #262a33 !important;
+    border-radius: 8px !important;
 }
 [data-testid="stExpander"] summary {
-    color: #60a5fa !important;
-    font-size: 0.82rem !important;
+    color: #94a3b8 !important;
     font-weight: 500 !important;
 }
-
-/* toggle */
-[data-testid="stToggle"] label { color: #9ca3af !important; }
-
-/* alert */
-[data-testid="stAlert"] {
-    background: #16191f !important;
-    border: 1px solid #2a2d35 !important;
-    border-radius: 10px !important;
-}
-
-/* 스크롤바 */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
-
-/* 마크다운 텍스트 */
-.stMarkdown p { color: #d1d5db !important; font-size: 0.88rem !important; line-height: 1.75 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -146,25 +105,24 @@ try:
         logo_b64 = base64.b64encode(f.read()).decode()
     logo_html = (
         f"<img src='data:image/png;base64,{logo_b64}' "
-        "style='width:36px;height:36px;object-fit:contain;"
-        "vertical-align:top;margin-right:10px;pointer-events:none;'>"
+        "style='width:42px;height:42px;object-fit:contain;"
+        "margin-right:14px;pointer-events:none;'>"
     )
 except Exception:
-    logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
+    logo_html = "<span style='font-size:1.8rem;margin-right:12px'>🏰</span>"
 
 st.markdown(
     f"""
-<div style='display:flex;align-items:center;padding:1.2rem 0 1rem;
-            border-bottom:1px solid rgba(196,160,80,0.2);margin-bottom:1.5rem'>
+<div style='display:flex;align-items:center;padding:1rem 0 1.5rem;
+            border-bottom:1px solid #1f232b;margin-bottom:2rem'>
   {logo_html}
   <div>
-    <div style='font-family:"Noto Serif KR",serif;font-size:1.3rem;font-weight:700;
-                color:#e8d5a0;letter-spacing:0.02em;line-height:1.2'>
+    <div style='font-size:1.4rem;font-weight:700;
+                color:#d4af37;letter-spacing:-0.02em;line-height:1.2'>
       롯데캐슬스카이엘 규약 통합 검색
     </div>
-    <div style='font-family:"Noto Sans KR",sans-serif;font-size:0.75rem;
-                color:rgba(196,160,80,0.6);margin-top:3px;letter-spacing:0.08em'>
-      관리규약 &nbsp;·&nbsp; 주차규약 &nbsp;·&nbsp; 커뮤니티센터 규약
+    <div style='font-size:0.85rem;color:#64748b;margin-top:4px;font-weight:500'>
+      관리규약 · 주차규약 · 커뮤니티센터 규약
     </div>
   </div>
 </div>""",
@@ -409,36 +367,44 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
 # ─────────────────────────────────────────
 # 7. 카드 렌더링
 # ─────────────────────────────────────────
+# ─────────────────────────────────────────
+# 7. 카드 렌더링
+# ─────────────────────────────────────────
+# 다크 모드에 어울리는 은은하고 세련된 뱃지 색상
 DOC_COLORS = {
-    "관리규약":         "#2a5298",
-    "주차규약":         "#1a6e4a",
-    "커뮤니티센터 규약": "#7a4a1a",
+    "관리규약":         ("rgba(59, 130, 246, 0.15)", "#60a5fa"), # Blue
+    "주차규약":         ("rgba(16, 185, 129, 0.15)", "#34d399"), # Emerald
+    "커뮤니티센터 규약": ("rgba(245, 158, 11, 0.15)", "#fbbf24"), # Amber
 }
 
 def render_article_card(art: dict, keyword: str = "") -> None:
     content = art["content"]
+    
+    # 다크 모드에 어울리는 은은한 하이라이트 (시인성 개선)
     if keyword:
         content = re.sub(
             f"(?i)({re.escape(keyword)})",
-            r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
+            r"<mark style='background:rgba(212, 175, 55, 0.25);color:#d4af37;padding:0 4px;border-radius:4px;font-weight:600;'>\1</mark>",
             content,
         )
-    bc = DOC_COLORS.get(art["doc"], "#4a5568")
+        
+    bg_color, text_color = DOC_COLORS.get(art["doc"], ("rgba(100, 116, 139, 0.15)", "#94a3b8"))
+    
     st.html(f"""
-<div style='border:1px solid rgba(196,160,80,0.15);border-radius:12px;padding:18px 22px;
-            margin-bottom:12px;
-            background:linear-gradient(135deg,rgba(196,160,80,0.04) 0%,rgba(255,255,255,0.02) 100%);
-            box-shadow:0 2px 12px rgba(0,0,0,0.3)'>
-  <div style='display:flex;align-items:center;margin-bottom:10px;gap:8px'>
-    <span style='background:{bc};color:white;padding:3px 10px;
-                 border-radius:4px;font-size:0.72rem;font-weight:600;
-                 letter-spacing:0.05em;font-family:Noto Sans KR,sans-serif'>{art["doc"]}</span>
-    <span style='font-size:0.95rem;font-weight:700;color:#e8d5a0;
-                 font-family:Noto Serif KR,serif'>{art["title"]}</span>
+<div style='background:#15181e;border:1px solid #262a33;border-radius:10px;
+            padding:1.2rem 1.5rem;margin-bottom:1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);'>
+  <div style='display:flex;align-items:center;margin-bottom:12px;gap:10px'>
+    <span style='background:{bg_color};color:{text_color};padding:4px 10px;
+                 border-radius:6px;font-size:0.75rem;font-weight:600;
+                 letter-spacing:0.02em;'>{art["doc"]}</span>
+    <span style='font-size:1.05rem;font-weight:700;color:#f8fafc;
+                 letter-spacing:-0.01em;'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.85rem;color:#b0bcd8;line-height:1.9;
-              font-family:Noto Sans KR,sans-serif;
-              border-top:1px solid rgba(196,160,80,0.1);padding-top:10px'>{content.replace(chr(10), '<br>')}</div>
+  <div style='font-size:0.9rem;color:#cbd5e1;line-height:1.7;
+              border-top:1px dashed #262a33;padding-top:12px;'>
+    {content.replace(chr(10), '<br>')}
+  </div>
 </div>""")
 
 # ─────────────────────────────────────────
