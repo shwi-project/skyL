@@ -89,12 +89,12 @@ loaded_names = list(pdf_texts.keys())
 st.divider()
 selected = st.radio(
     "📋 검색할 규약 선택",
-    options=["전체"] + loaded_names,
+    options=loaded_names,
     horizontal=True,
     label_visibility="visible",
 )
-selected_names = loaded_names if selected == "전체" else [selected]
-combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected_names)
+selected_names = [selected]
+combined_text = f"=== [{selected}] ===\n{pdf_texts[selected]}"
 
 # ─────────────────────────────────────────
 # 4. Gemini AI
@@ -303,7 +303,7 @@ def render_article_card(art: dict, keyword: str = "") -> None:
 # ─────────────────────────────────────────
 # 8. 탭 구성
 # ─────────────────────────────────────────
-tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✴ AI 질문 검색"])
+tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
