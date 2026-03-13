@@ -430,27 +430,32 @@ with tab_ai:
                         for doc_name in selected:
                             all_arts += get_all_articles(doc_name, pdf_texts[doc_name])
 
-                        # 규약명 키워드 → doc명 매핑
-                        DOC_ALIAS = {
+                        ALIAS_MAP = {
                             "관리규약": "관리규약",
                             "주차규약": "주차규약",
                             "주차관리": "주차규약",
-                            "커뮤니티": "커뮤니티센터 규약",
-                            "커뮤니티센터": "커뮤니티센터 규약",
+                            "커뮤니티센터 규약": "커뮤니티센터 규약",
+                            "커뮤니티규약": "커뮤니티센터 규약",
                         }
+
+                        def extract_pairs(text):
+                            """규약명 이후 연속된 제N조를 같은 규약으로 묶어 추출.
+                            제N항·제N호 숫자는 조번호로 취급하지 않음."""
+                            result = []
+                            clean = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", text)
+                            doc_pat = re.compile(r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)")
+                            for dm in doc_pat.finditer(clean):
+                                doc_name = ALIAS_MAP.get(dm.group(0).strip(), dm.group(0).strip())
+                                after = clean[dm.end():]
+                                next_doc = doc_pat.search(after)
+                                scope = after[:next_doc.start()] if next_doc else after
+                                for am in re.finditer(r"제\s*(\d+)\s*조", scope):
+                                    result.append((doc_name, am.group(1)))
+                            return list(dict.fromkeys(result))  # 중복 제거, 순서 유지
 
                         related = []
                         seen_keys = set()
-
-                        # "관리규약 제16조", "주차규약 제20조" 패턴 추출
-                        # 📌 등 기호 제거 후 매칭
-                        clean_response = re.sub(r"[📌✅•·▶◆※]", " ", response_text)
-                        pairs = re.findall(
-                            r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)\s*제\s*(\d+)\s*조",
-                            clean_response
-                        )
-                        for alias, num in pairs:
-                            doc_name = DOC_ALIAS.get(alias.strip(), alias.strip())
+                        for doc_name, num in extract_pairs(response_text):
                             key = (doc_name, num)
                             if key in seen_keys:
                                 continue
@@ -460,20 +465,6 @@ with tab_ai:
                                 if art["doc"] == doc_name and pat.search(art["title"]):
                                     related.append(art)
                                     break
-
-                        # 쌍 매칭 실패 시 조항 번호만으로 fallback (언급된 규약 한정)
-                        if not related:
-                            mentioned_docs = set()
-                            for alias in DOC_ALIAS:
-                                if alias in response_text:
-                                    mentioned_docs.add(DOC_ALIAS[alias])
-                            nums = re.findall(r"제\s*(\d+)\s*조", response_text)
-                            for num in set(nums):
-                                pat = re.compile(rf"제\s*{num}\s*조")
-                                for art in all_arts:
-                                    if art["doc"] in mentioned_docs and pat.search(art["title"]):
-                                        if art not in related:
-                                            related.append(art)
 
                         if related:
                             with st.expander("📋 관련 조항 원문 보기", expanded=False):
