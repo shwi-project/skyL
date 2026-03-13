@@ -8,7 +8,7 @@ from pypdf import PdfReader
 # 페이지 설정
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🦅", layout="wide")
-st.title("🦅롯데캐슬스카이엘 규약 통합 검색")
+st.title("🦅 롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
 # ─────────────────────────────────────────
@@ -164,28 +164,21 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 @st.cache_resource
 def get_model():
-    """사용 가능한 Gemini 모델을 우선순위대로 반환."""
-    # list_models 실패해도 fallback 동작
-    try:
-        available = {
-            m.name for m in genai.list_models()
-            if "generateContent" in m.supported_generation_methods
-        }
-    except Exception:
-        available = set()
-
-    priority = [
-        "models/gemini-2.0-flash-lite",
-        "models/gemini-1.5-flash-latest",
-        "models/gemini-1.5-flash",
-        "models/gemini-1.5-flash-8b",
+    """실제 호출해보며 사용 가능한 모델을 찾아 반환."""
+    candidates = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
     ]
-    # available이 비어있으면 그냥 첫 번째 후보 사용
-    for name in priority:
-        if not available or name in available:
-            short = name.replace("models/", "")
-            return genai.GenerativeModel(short), short
-    return genai.GenerativeModel("gemini-1.5-flash"), "gemini-1.5-flash"
+    last_err = None
+    for name in candidates:
+        try:
+            m = genai.GenerativeModel(name)
+            m.generate_content("test")
+            return m, name
+        except Exception as e:
+            last_err = e
+    raise RuntimeError(f"사용 가능한 Gemini 모델 없음: {last_err}")
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
