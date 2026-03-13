@@ -49,13 +49,11 @@ except Exception:
 # 2. PDF 로드 (pdfplumber)
 # ─────────────────────────────────────────
 def is_toc_page(text: str) -> bool:
-    """목차 페이지 여부 — 점선 문자가 많으면 목차."""
     return text.count("·") + text.count("…") + text.count("‥") > 8
 
 
 @st.cache_data(show_spinner=False)
 def load_pdf_text(pdf_path: str, _v: int = 1) -> str:
-    """pdfplumber로 PDF 전체 텍스트 추출."""
     if not os.path.exists(pdf_path):
         return ""
     pages = []
@@ -111,7 +109,6 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # 4. Gemini AI 호출
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 호출. 429 시 최대 3회 재시도."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
     model   = "gemini-2.5-flash"
     url     = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -149,18 +146,33 @@ def ai_generate(prompt: str) -> str:
 # ─────────────────────────────────────────
 # 5. 조항 파싱
 # ─────────────────────────────────────────
-# 관리규약: 제N조【제목】, 주차규약: 제N조 (제목), 커뮤니티: 제N조 제목
+# 세 규약 모두 "제N조"로 시작 → 다음 "제N조" 전까지를 하나의 블록으로
 ARTICLE_RE = re.compile(
-    r"(제\s*\d+\s*조(?:의\s*\d+)?"         # 제N조
-    r"(?:【[^】]*】|\([^\)]*\))?"           # 【제목】또는 (제목) 선택적
-    r"[^\n]*\n[\s\S]*?)"                   # 나머지 내용
-    r"(?=\n제\s*\d+\s*조(?:의\s*\d+)?|\Z)"
+    r"(제\s*\d+\s*조[^\n]*(?:\n(?!제\s*\d+\s*조).+)*)",
+    re.MULTILINE
 )
 
+# 제목 추출: 규약별 형식에 맞게
+# 관리규약: 제N조【제목】  /  주차규약: 제N조 (제목)  /  커뮤니티: 제N조 제목(한 단어)
 TITLE_RE = re.compile(
     r"제\s*(\d+)\s*조(?:의\s*\d+)?"
-    r"(?:【([^】]*)】|\(([^\)]*)\))?"       # 【제목】또는 (제목)
+    r"(?:\s*【([^】]*)】"      # 【제목】
+    r"|\s*\(([^\)]{1,20})\)"  # (제목)
+    r"|\s+([가-힣a-zA-Z\s·,]{2,20}?)"  # 한글 제목 (짧은 것만)
+    r")?"
 )
+
+def extract_title(first_line: str) -> str:
+    tm = TITLE_RE.match(first_line)
+    if not tm:
+        return first_line[:30].strip()
+    num  = tm.group(1)
+    sub  = (tm.group(2) or tm.group(3) or tm.group(4) or "").strip()
+    # 한글 제목인 경우 본문이 붙어있으면 제목 부분만
+    if tm.group(4):
+        sub = sub.split(" ")[0] if len(sub) > 10 else sub
+    return f"제{num}조" + (f" {sub}" if sub else "")
+
 
 def parse_articles(doc_name: str, text: str) -> list[dict]:
     articles = []
@@ -169,15 +181,7 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         lines = [l for l in block.splitlines() if l.strip()]
         if len(lines) <= 1:
             continue
-        # 제목 추출: 제N조 + 괄호 제목
-        first_line = lines[0]
-        tm = TITLE_RE.match(first_line)
-        if tm:
-            num       = tm.group(1)
-            sub_title = (tm.group(2) or tm.group(3) or "").strip()
-            title     = f"제{num}조" + (f" {sub_title}" if sub_title else "")
-        else:
-            title = first_line[:30].strip()
+        title = extract_title(lines[0])
         if len(block) > 1500:
             block = block[:1500].strip() + "...(이하 생략)"
         articles.append({"doc": doc_name, "title": title, "content": block})
@@ -254,7 +258,6 @@ with tab_keyword:
         else:
             st.success(f"총 **{len(matched)}개** 조항 발견")
 
-            # AI 요약 (같은 키워드면 캐시 재사용)
             if use_ai and api_ready:
                 cache_key = f"summary_{keyword}"
                 if cache_key not in st.session_state:
@@ -294,6 +297,13 @@ with tab_ai:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # 대화 초기화 버튼 (상단 고정)
+    if st.session_state.get("messages"):
+        if st.button("🗑️ 대화 초기화", key="clear_btn"):
+            st.session_state.messages = []
+            st.rerun()
+
+    # 이전 대화 표시
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -302,6 +312,7 @@ with tab_ai:
                     for art in msg["articles"]:
                         render_article_card(art)
 
+    # 입력창 (Streamlit이 자동으로 하단 고정)
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -332,14 +343,18 @@ with tab_ai:
                         "관리규약":         "관리규약",
                         "주차규약":         "주차규약",
                         "주차관리":         "주차규약",
+                        "주차관리규정":     "주차규약",
                         "커뮤니티센터 규약": "커뮤니티센터 규약",
                         "커뮤니티규약":     "커뮤니티센터 규약",
+                        "운영규정":         "커뮤니티센터 규약",
                     }
 
                     def extract_pairs(txt: str) -> list:
                         result  = []
                         clean   = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", txt)
-                        doc_pat = re.compile(r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)")
+                        doc_pat = re.compile(
+                            r"(관리규약|주차규약|주차관리규정?|커뮤니티센터?\s*규약|운영규정)"
+                        )
                         for dm in doc_pat.finditer(clean):
                             doc_name = ALIAS_MAP.get(dm.group(0).strip(), dm.group(0).strip())
                             after    = clean[dm.end():]
@@ -375,8 +390,3 @@ with tab_ai:
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
-
-    if st.session_state.get("messages"):
-        if st.button("🗑️ 대화 초기화"):
-            st.session_state.messages = []
-            st.rerun()
