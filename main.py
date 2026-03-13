@@ -229,9 +229,6 @@ def render_article_card(art: dict, keyword: str = "") -> None:
 # ─────────────────────────────────────────
 tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
 
-# AI 질문용 chat_input은 탭 바깥에 배치해야 화면 하단 고정됨
-# 탭 안에 넣으면 Streamlit 버그로 스크롤 따라 내려감
-ai_prompt_input = st.chat_input("💬 AI에게 질문하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)")
 
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
@@ -298,27 +295,24 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # 직전 답변만 보관 (새 질문 시 자동 교체)
+    if "last_answer" not in st.session_state:
+        st.session_state.last_answer = None
 
-    # 대화 초기화 버튼 (상단 고정)
-    if st.session_state.get("messages"):
-        if st.button("🗑️ 대화 초기화", key="clear_btn"):
-            st.session_state.messages = []
-            st.rerun()
-
-    # 이전 대화 표시
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            if msg.get("articles"):
+    # 직전 답변 표시
+    if st.session_state.last_answer:
+        ans = st.session_state.last_answer
+        with st.chat_message("user"):
+            st.markdown(ans["question"])
+        with st.chat_message("assistant"):
+            st.markdown(ans["response"])
+            if ans.get("articles"):
                 with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                    for art in msg["articles"]:
+                    for art in ans["articles"]:
                         render_article_card(art)
 
-    prompt = ai_prompt_input
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    # 입력창
+    if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         with st.chat_message("user"):
             st.markdown(prompt)
 
@@ -342,16 +336,6 @@ with tab_ai:
                     all_arts = []
                     for dn in selected:
                         all_arts += get_articles(dn, pdf_texts[dn])
-
-                    ALIAS_MAP = {
-                        "관리규약":         "관리규약",
-                        "주차규약":         "주차규약",
-                        "주차관리":         "주차규약",
-                        "주차관리규정":     "주차규약",
-                        "커뮤니티센터 규약": "커뮤니티센터 규약",
-                        "커뮤니티규약":     "커뮤니티센터 규약",
-                        "운영규정":         "커뮤니티센터 규약",
-                    }
 
                     def extract_pairs(txt: str) -> list:
                         result  = []
@@ -397,11 +381,12 @@ with tab_ai:
                             for art in related:
                                 render_article_card(art)
 
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": response_text,
+                    # 새 질문으로 자동 교체
+                    st.session_state.last_answer = {
+                        "question": prompt,
+                        "response": response_text,
                         "articles": related,
-                    })
+                    }
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
