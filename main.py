@@ -290,15 +290,8 @@ with tab_keyword:
                     try:
                         result = ai_generate(prompt)
                         if result:
-                            st.html(f"""
-<div style='background:linear-gradient(135deg,#f0f7ff,#e8f4fd);
-            border-left:4px solid #1a6ebd;border-radius:0 10px 10px 0;
-            padding:16px 20px;margin-bottom:8px'>
-  <div style='font-weight:700;color:#1a6ebd;font-size:1rem;margin-bottom:8px'>
-    🤖 AI 요약
-  </div>
-  <div style='font-size:0.9rem;color:#333;line-height:1.8;white-space:pre-wrap'>{result}</div>
-</div>""")
+                            st.markdown("##### 🤖 AI 요약")
+                            st.markdown(result)
                     except Exception as e:
                         st.warning(f"AI 요약 실패: {e}")
 
