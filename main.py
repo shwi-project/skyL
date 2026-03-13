@@ -15,129 +15,128 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 # ── 글로벌 CSS ──
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
 
-/* 전체 배경 */
+* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+
+/* 배경 */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(160deg, #0a0e1a 0%, #0f1624 50%, #0d1420 100%);
+    background: #111318 !important;
 }
-[data-testid="stHeader"] { background: transparent; }
-
-/* 사이드바 없애고 메인 영역 */
-.main .block-container {
-    max-width: 900px;
-    padding: 2rem 2rem 4rem;
-}
+[data-testid="stHeader"] { background: transparent !important; }
+.main .block-container { max-width: 860px; padding: 2rem 2rem 5rem; }
 
 /* 구분선 */
-hr { border-color: rgba(196,160,80,0.2) !important; }
+hr { border-color: #2a2d35 !important; }
 
-/* multiselect */
+/* multiselect 레이블 */
 [data-testid="stMultiSelect"] label {
-    color: #a0a8c0 !important;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    color: #6b7280 !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
 }
-[data-testid="stMultiSelect"] [data-baseweb="select"] {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid rgba(196,160,80,0.3) !important;
-    border-radius: 8px !important;
+/* multiselect 박스 */
+[data-baseweb="select"] > div {
+    background: #1a1d24 !important;
+    border: 1px solid #2a2d35 !important;
+    border-radius: 10px !important;
 }
+/* 태그 */
 [data-baseweb="tag"] {
-    background: linear-gradient(135deg, #c4a050, #e8c878) !important;
-    color: #0a0e1a !important;
-    font-weight: 600 !important;
-    border-radius: 4px !important;
+    background: #1e3a5f !important;
+    color: #60a5fa !important;
+    border-radius: 6px !important;
+    border: none !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
 }
 
 /* 탭 */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: transparent;
-    border-bottom: 1px solid rgba(196,160,80,0.2);
-    gap: 0;
+    background: transparent !important;
+    border-bottom: 1px solid #2a2d35 !important;
+    gap: 4px !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    color: #6070a0 !important;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 0.85rem;
-    letter-spacing: 0.05em;
-    padding: 0.6rem 1.4rem;
+    color: #4b5563 !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.03em !important;
+    padding: 0.65rem 1.2rem !important;
     background: transparent !important;
-    border: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: color 0.2s !important;
 }
 [data-testid="stTabs"] [aria-selected="true"] {
-    color: #c4a050 !important;
-    border-bottom: 2px solid #c4a050 !important;
+    color: #f9fafb !important;
+    background: rgba(255,255,255,0.04) !important;
+    border-bottom: 2px solid #3b82f6 !important;
 }
 
-/* 키워드 입력창 */
-[data-testid="stTextInput"] input {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid rgba(196,160,80,0.25) !important;
-    border-radius: 8px !important;
-    color: #e8eaf0 !important;
-    font-family: 'Noto Sans KR', sans-serif;
-}
-[data-testid="stTextInput"] input:focus {
-    border-color: rgba(196,160,80,0.6) !important;
-    box-shadow: 0 0 0 2px rgba(196,160,80,0.1) !important;
-}
-
-/* 채팅 입력창 */
+/* 텍스트 입력 */
+[data-testid="stTextInput"] input,
 [data-testid="stChatInput"] textarea {
-    background: rgba(255,255,255,0.03) !important;
-    border: 1px solid rgba(196,160,80,0.25) !important;
+    background: #1a1d24 !important;
+    border: 1px solid #2a2d35 !important;
     border-radius: 10px !important;
-    color: #e8eaf0 !important;
-    font-family: 'Noto Sans KR', sans-serif;
+    color: #f3f4f6 !important;
+    font-size: 0.88rem !important;
 }
+[data-testid="stTextInput"] input:focus,
 [data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(196,160,80,0.5) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important;
 }
+
+/* 채팅 전송 버튼 */
 [data-testid="stChatInput"] button {
-    background: linear-gradient(135deg, #c4a050, #e8c878) !important;
+    background: #3b82f6 !important;
     border-radius: 8px !important;
+    transition: background 0.2s !important;
+}
+[data-testid="stChatInput"] button:hover {
+    background: #2563eb !important;
 }
 
 /* 채팅 메시지 */
 [data-testid="stChatMessage"] {
-    background: rgba(255,255,255,0.02) !important;
-    border: 1px solid rgba(255,255,255,0.05) !important;
-    border-radius: 12px !important;
-    margin-bottom: 0.5rem;
-}
-
-/* spinner */
-[data-testid="stSpinner"] { color: #c4a050 !important; }
-
-/* success/warning/error */
-[data-testid="stAlert"] {
-    border-radius: 8px !important;
-    border: 1px solid rgba(196,160,80,0.2) !important;
-    background: rgba(196,160,80,0.05) !important;
+    background: #16191f !important;
+    border: 1px solid #22252e !important;
+    border-radius: 14px !important;
+    margin-bottom: 8px !important;
 }
 
 /* expander */
 [data-testid="stExpander"] {
-    border: 1px solid rgba(196,160,80,0.2) !important;
+    background: #16191f !important;
+    border: 1px solid #22252e !important;
     border-radius: 10px !important;
-    background: rgba(255,255,255,0.01) !important;
 }
 [data-testid="stExpander"] summary {
-    color: #c4a050 !important;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 0.85rem;
+    color: #60a5fa !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
 }
 
 /* toggle */
-[data-testid="stToggle"] label { color: #a0a8c0 !important; }
+[data-testid="stToggle"] label { color: #9ca3af !important; }
+
+/* alert */
+[data-testid="stAlert"] {
+    background: #16191f !important;
+    border: 1px solid #2a2d35 !important;
+    border-radius: 10px !important;
+}
 
 /* 스크롤바 */
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(196,160,80,0.3); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #2a2d35; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* 마크다운 텍스트 */
+.stMarkdown p { color: #d1d5db !important; font-size: 0.88rem !important; line-height: 1.75 !important; }
 </style>
 """, unsafe_allow_html=True)
 
