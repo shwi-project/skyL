@@ -11,6 +11,17 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 st.title("🦅🏰 롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
+# ── 디버그: 사용 가능한 모델 확인 (확인 후 삭제 예정) ──
+with st.expander("🔧 사용 가능한 모델 확인 (클릭)"):
+    if st.button("모델 목록 조회"):
+        try:
+            import google.generativeai as _genai
+            _genai.configure(api_key=st.secrets.get("GOOGLE_API_KEY", ""))
+            models = [m.name for m in _genai.list_models() if "generateContent" in m.supported_generation_methods]
+            st.write(models)
+        except Exception as e:
+            st.error(f"조회 실패: {e}")
+
 # ─────────────────────────────────────────
 # 1. API 키 설정
 # ─────────────────────────────────────────
@@ -162,28 +173,31 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
-# 신규 사용자에게 열려있는 모델 목록 (순서대로 시도)
+# 2025년 3월 기준 AI Studio 신규 사용자에게 열려있는 모델 (순서대로 시도)
 CANDIDATE_MODELS = [
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-flash",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
+    "gemini-3-flash-preview",
 ]
 
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 직접 호출 — 여러 모델 순서대로 시도."""
+    """Gemini REST API 직접 호출."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
+    base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key,
+    }
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
     last_err = None
     for model in CANDIDATE_MODELS:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={api_key}"
-        )
-        headers = {"Content-Type": "application/json"}
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        url = f"{base_url}/{model}:generateContent"
         try:
             resp = requests.post(url, headers=headers, json=payload, timeout=120)
-            if resp.status_code == 404:
-                last_err = f"{model}: 404 Not Found"
+            if resp.status_code in (404, 400):
+                last_err = f"{model}: {resp.status_code}"
                 continue
             resp.raise_for_status()
             data = resp.json()
@@ -191,7 +205,7 @@ def ai_generate(prompt: str) -> str:
         except Exception as e:
             last_err = f"{model}: {e}"
             continue
-    raise RuntimeError(f"모든 모델 시도 실패. 마지막 오류: {last_err}")
+    raise RuntimeError(f"모든 모델 시도 실패: {last_err}")
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
