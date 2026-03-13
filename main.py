@@ -12,7 +12,7 @@ import streamlit as st
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
-# 헤더: 로고 + 타이틀
+# 헤더
 try:
     with open("logo.png", "rb") as f:
         logo_b64 = base64.b64encode(f.read()).decode()
@@ -35,22 +35,20 @@ st.markdown(
 )
 
 # ─────────────────────────────────────────
-# 1. API 키 설정
+# 1. API 키
 # ─────────────────────────────────────────
 try:
-    API_KEY = st.secrets["GOOGLE_API_KEY"]
-    st.session_state["GOOGLE_API_KEY"] = API_KEY
+    st.session_state["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
     api_ready = True
 except Exception:
     st.warning("⚠️ Streamlit Cloud의 Settings > Secrets에 GOOGLE_API_KEY를 등록해주세요.")
     api_ready = False
 
 # ─────────────────────────────────────────
-# 2. PDF 로드 (pdfplumber)
+# 2. PDF 로드
 # ─────────────────────────────────────────
 def is_toc_page(text: str) -> bool:
     return text.count("·") + text.count("…") + text.count("‥") > 8
-
 
 @st.cache_data(show_spinner=False)
 def load_pdf_text(pdf_path: str, _v: int = 1) -> str:
@@ -67,11 +65,10 @@ def load_pdf_text(pdf_path: str, _v: int = 1) -> str:
         st.error(f"PDF 읽기 오류 ({pdf_path}): {e}")
     return "\n\n".join(pages)
 
-
 PDF_FILES = {
-    "관리규약":          "rules_management.pdf",
-    "주차규약":          "rules_parking.pdf",
-    "커뮤니티센터 규약":  "rules_community.pdf",
+    "관리규약":         "rules_management.pdf",
+    "주차규약":         "rules_parking.pdf",
+    "커뮤니티센터 규약": "rules_community.pdf",
 }
 
 pdf_texts: dict[str, str] = {}
@@ -81,10 +78,7 @@ for name, path in PDF_FILES.items():
         pdf_texts[name] = t
 
 if not pdf_texts:
-    st.error(
-        "📂 GitHub 저장소 최상위 경로에 PDF 파일을 업로드해주세요:\n\n"
-        "- `rules_management.pdf`\n- `rules_parking.pdf`\n- `rules_community.pdf`"
-    )
+    st.error("📂 GitHub 저장소에 PDF 파일을 업로드해주세요.")
     st.stop()
 
 loaded_names = list(pdf_texts.keys())
@@ -94,11 +88,7 @@ st.success(f"✅ 로드된 규약: {', '.join(loaded_names)}")
 # 3. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
-selected = st.multiselect(
-    "🔍 검색할 규약 선택",
-    options=loaded_names,
-    default=loaded_names,
-)
+selected = st.multiselect("🔍 검색할 규약 선택", options=loaded_names, default=loaded_names)
 if not selected:
     st.info("검색할 규약을 하나 이상 선택해주세요.")
     st.stop()
@@ -106,7 +96,7 @@ if not selected:
 combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 
 # ─────────────────────────────────────────
-# 4. Gemini AI 호출
+# 4. Gemini AI
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
@@ -127,7 +117,7 @@ def ai_generate(prompt: str) -> str:
         if not resp.ok:
             raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
         candidate = resp.json()["candidates"][0]
-        text      = candidate["content"]["parts"][0]["text"]
+        text = candidate["content"]["parts"][0]["text"]
         if candidate.get("finishReason") == "MAX_TOKENS":
             cont = requests.post(url, headers=headers, json={
                 "contents": [
@@ -142,37 +132,27 @@ def ai_generate(prompt: str) -> str:
         return text
     raise RuntimeError(f"429 한도 초과: {last_err}")
 
-
 # ─────────────────────────────────────────
 # 5. 조항 파싱
 # ─────────────────────────────────────────
-# 세 규약 모두 "제N조"로 시작 → 다음 "제N조" 전까지를 하나의 블록으로
 ARTICLE_RE = re.compile(
     r"(제\s*\d+\s*조[^\n]*(?:\n(?!제\s*\d+\s*조).+)*)",
     re.MULTILINE
 )
-
-# 제목 추출: 규약별 형식에 맞게
-# 관리규약: 제N조【제목】  /  주차규약: 제N조 (제목)  /  커뮤니티: 제N조 제목(한 단어)
 TITLE_RE = re.compile(
     r"제\s*(\d+)\s*조(?:의\s*\d+)?"
-    r"(?:\s*【([^】]*)】"      # 【제목】
-    r"|\s*\(([^\)]{1,20})\)"  # (제목)
-    r"|\s+([가-힣a-zA-Z\s·,]{2,20}?)"  # 한글 제목 (짧은 것만)
-    r")?"
+    r"(?:\s*【([^】]*)】|\s*\(([^\)]{1,20})\)|\s+([가-힣a-zA-Z\s·,]{2,20}?))?"
 )
 
 def extract_title(first_line: str) -> str:
     tm = TITLE_RE.match(first_line)
     if not tm:
         return first_line[:30].strip()
-    num  = tm.group(1)
-    sub  = (tm.group(2) or tm.group(3) or tm.group(4) or "").strip()
-    # 한글 제목인 경우 본문이 붙어있으면 제목 부분만
+    num = tm.group(1)
+    sub = (tm.group(2) or tm.group(3) or tm.group(4) or "").strip()
     if tm.group(4):
         sub = sub.split(" ")[0] if len(sub) > 10 else sub
     return f"제{num}조" + (f" {sub}" if sub else "")
-
 
 def parse_articles(doc_name: str, text: str) -> list[dict]:
     articles = []
@@ -187,21 +167,64 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
-
 @st.cache_data(show_spinner=False)
 def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
     return parse_articles(doc_name, text)
 
+# ─────────────────────────────────────────
+# 6. 근거 조항 추출 (AI 응답 → 규약명+조번호)
+# ─────────────────────────────────────────
+DOC_PAT = re.compile(
+    r"(관리규약"
+    r"|주차\s*관리\s*규정?"
+    r"|주차\s*규약"
+    r"|커뮤니티\s*센터?\s*규약"
+    r"|주민공동시설\s*운영규정?"
+    r"|운영규정)"
+)
+
+def classify_doc(raw: str) -> str:
+    if "관리규약" in raw and "주차" not in raw:
+        return "관리규약"
+    if "주차" in raw:
+        return "주차규약"
+    return "커뮤니티센터 규약"
+
+def extract_pairs(txt: str) -> list[tuple]:
+    result = []
+    clean  = re.sub(r"[^\w\s가-힣]", " ", txt)
+    for dm in DOC_PAT.finditer(clean):
+        doc_name = classify_doc(dm.group(0))
+        after    = clean[dm.end():]
+        nxt      = DOC_PAT.search(after)
+        scope    = after[:nxt.start()] if nxt else after
+        for am in re.finditer(r"제\s*(\d+)\s*조", scope):
+            result.append((doc_name, am.group(1)))
+    return list(dict.fromkeys(result))
+
+def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict]:
+    related   = []
+    seen_keys = set()
+    for doc_name, num in extract_pairs(response_text):
+        key = (doc_name, num)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        pat = re.compile(rf"제\s*{num}\s*조")
+        for art in all_arts:
+            if art["doc"] == doc_name and pat.search(art["title"]):
+                related.append(art)
+                break
+    return related
 
 # ─────────────────────────────────────────
-# 6. 공통 UI — 조항 카드
+# 7. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
-    "관리규약":          "#1a6ebd",
-    "주차규약":          "#2e8b57",
-    "커뮤니티센터 규약":  "#8b4513",
+    "관리규약":         "#1a6ebd",
+    "주차규약":         "#2e8b57",
+    "커뮤니티센터 규약": "#8b4513",
 }
-
 
 def render_article_card(art: dict, keyword: str = "") -> None:
     content = art["content"]
@@ -223,12 +246,10 @@ def render_article_card(art: dict, keyword: str = "") -> None:
   <div style='font-size:0.88rem;color:#333;line-height:1.8;white-space:pre-wrap'>{content}</div>
 </div>""")
 
-
 # ─────────────────────────────────────────
-# 7. 탭 구성
+# 8. 탭 구성
 # ─────────────────────────────────────────
 tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
-
 
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
@@ -248,10 +269,8 @@ with tab_keyword:
         matched: list[dict] = []
         for doc_name in selected:
             arts = get_articles(doc_name, pdf_texts[doc_name])
-            title_hits = [a for a in arts if kw in a["title"].lower()]
-            body_hits  = [a for a in arts if kw in a["content"].lower()
-                          and kw not in a["title"].lower()]
-            matched.extend(title_hits + body_hits)
+            matched.extend(a for a in arts if kw in a["title"].lower())
+            matched.extend(a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower())
         matched = matched[:10]
 
         if not matched:
@@ -263,18 +282,15 @@ with tab_keyword:
                 cache_key = f"summary_{keyword}"
                 if cache_key not in st.session_state:
                     docs = list({a["doc"] for a in matched})
-                    ctx  = "\n\n".join(
-                        f"=== [{n}] ===\n{pdf_texts[n]}" for n in docs if n in pdf_texts
-                    )
-                    ai_prompt = (
-                        f"아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.\n"
-                        f"구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,\n"
-                        f"관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.\n"
-                        f"서론 없이 바로 내용부터 시작해줘.\n\n[규약 전문]\n{ctx}"
-                    )
+                    ctx  = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in docs if n in pdf_texts)
                     with st.spinner("AI가 요약하는 중..."):
                         try:
-                            st.session_state[cache_key] = ai_generate(ai_prompt)
+                            st.session_state[cache_key] = ai_generate(
+                                f"아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.\n"
+                                f"구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,\n"
+                                f"관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.\n"
+                                f"서론 없이 바로 내용부터 시작해줘.\n\n[규약 전문]\n{ctx}"
+                            )
                         except Exception as e:
                             st.warning(f"AI 요약 실패: {e}")
                             st.session_state[cache_key] = None
@@ -295,7 +311,6 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 직전 답변만 보관 (새 질문 시 자동 교체)
     if "last_answer" not in st.session_state:
         st.session_state.last_answer = None
 
@@ -311,15 +326,18 @@ with tab_ai:
                     for art in ans["articles"]:
                         render_article_card(art)
 
-    # 입력창
+    # 입력창 — 새 질문 시 이전 답변 자동 교체
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
+        # 즉시 이전 답변 초기화 후 재렌더링
+        st.session_state.last_answer = None
+
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
             with st.spinner("AI가 답변을 생성하는 중..."):
                 try:
-                    full_prompt = (
+                    response_text = ai_generate(
                         "너는 아파트 규약 전문 AI 비서야.\n"
                         "아래 규약 전문을 읽고 질문에 답변해줘.\n\n"
                         "규칙:\n"
@@ -329,59 +347,19 @@ with tab_ai:
                         "- 규약에 없는 내용은 \"해당 규약에서 찾을 수 없습니다\"라고만 답해줘\n\n"
                         f"[규약 전문]\n{combined_text}\n\n[질문]\n{prompt}"
                     )
-                    response_text = ai_generate(full_prompt)
                     st.markdown(response_text)
 
-                    # 근거 조항 원문 매칭
                     all_arts = []
                     for dn in selected:
                         all_arts += get_articles(dn, pdf_texts[dn])
 
-                    def extract_pairs(txt: str) -> list:
-                        result  = []
-                        clean   = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", txt)
-                        doc_pat = re.compile(
-                            r"(관리규약"
-                            r"|주차\s*관리\s*규정?"
-                            r"|주차\s*규약"
-                            r"|커뮤니티\s*센터?\s*규약"
-                            r"|주민공동시설\s*운영규정?"
-                            r"|운영규정)"
-                        )
-                        for dm in doc_pat.finditer(clean):
-                            raw = dm.group(0).strip()
-                            if "관리규약" in raw and "주차" not in raw:
-                                doc_name = "관리규약"
-                            elif "주차" in raw:
-                                doc_name = "주차규약"
-                            else:
-                                doc_name = "커뮤니티센터 규약"
-                            after = clean[dm.end():]
-                            nxt   = doc_pat.search(after)
-                            scope = after[:nxt.start()] if nxt else after
-                            for am in re.finditer(r"제\s*(\d+)\s*조", scope):
-                                result.append((doc_name, am.group(1)))
-                        return list(dict.fromkeys(result))
-
-                    related   = []
-                    seen_keys = set()
-                    for doc_name, num in extract_pairs(response_text):
-                        key = (doc_name, num)
-                        if key in seen_keys:
-                            continue
-                        seen_keys.add(key)
-                        pat = re.compile(rf"제\s*{num}\s*조")
-                        for art in all_arts:
-                            if art["doc"] == doc_name and pat.search(art["title"]):
-                                related.append(art)
-                                break
+                    related = find_related_articles(response_text, all_arts)
 
                     if related:
                         with st.expander("📋 관련 조항 원문 보기", expanded=False):
                             for art in related:
                                 render_article_card(art)
 
-                    # 새 질문으로 자동 교체
                     st.session_state.last_answer = {
                         "question": prompt,
                         "response": response_text,
