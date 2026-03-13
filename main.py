@@ -88,14 +88,40 @@ for name in selected:
 # ─────────────────────────────────────────
 @st.cache_resource
 def get_model():
-    return genai.GenerativeModel("gemini-2.0-flash")
+    """사용 가능한 Gemini 모델을 우선순위대로 반환."""
+    try:
+        available = {m.name for m in genai.list_models()
+                     if "generateContent" in m.supported_generation_methods}
+    except Exception:
+        available = set()
+
+    candidates = [
+        "models/gemini-2.0-flash-lite",
+        "models/gemini-1.5-flash",
+        "models/gemini-1.5-flash-8b",
+    ]
+    for name in candidates:
+        if not available or name in available:
+            return genai.GenerativeModel(name.replace("models/", ""))
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 # ─────────────────────────────────────────
-# 5. 조/항 단위 파싱
+# 5. 조/항 단위 파싱 (목차 제외)
 # ─────────────────────────────────────────
 ARTICLE_PATTERN = re.compile(
     r"(제\s*\d+\s*조(?:의\s*\d+)?[\s\S]*?)(?=제\s*\d+\s*조(?:의\s*\d+)?|\Z)"
 )
+
+def is_toc_block(block: str) -> bool:
+    """목차성 블록인지 판단 — 내용이 거의 없고 짧으면 목차로 간주."""
+    lines = [l.strip() for l in block.splitlines() if l.strip()]
+    if len(lines) <= 2:
+        return True
+    # 실제 본문이 없고 조항 제목만 나열된 경우 (한 줄당 20자 미만이 대부분)
+    content_lines = lines[1:]  # 첫 줄(제목) 제외
+    if content_lines and all(len(l) < 25 for l in content_lines):
+        return True
+    return False
 
 def parse_articles(text: str) -> list[dict]:
     articles = []
@@ -103,6 +129,8 @@ def parse_articles(text: str) -> list[dict]:
         block = m.group(0).strip()
         if not block:
             continue
+        if is_toc_block(block):
+            continue  # 목차 블록 제외
         first_line = block.splitlines()[0].strip()
         articles.append({"title": first_line, "content": block})
     return articles
