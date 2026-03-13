@@ -96,33 +96,9 @@ st.markdown(
   </div>
 </div>""",
     unsafe_allow_html=True,
-)# 헤더
-try:
-    with open("logo.png", "rb") as f:
-        logo_b64 = base64.b64encode(f.read()).decode()
-    logo_html = (
-        f"<img src='data:image/png;base64,{logo_b64}' "
-        "style='width:42px;height:42px;object-fit:contain;"
-        "margin-right:12px;pointer-events:none;'>"
-    )
-except Exception:
-    logo_html = "<span style='font-size:1.8rem;margin-right:12px'>🏰</span>"
-
-st.markdown(
-    f"""
-<div style='display:flex;align-items:center;padding:1rem 0 0.5rem; margin-bottom:0;'>
-  {logo_html}
-  <div>
-    <div style='font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:var(--text-color);'>
-      롯데캐슬스카이엘 규약 통합 검색
-    </div>
-    <div style='font-size:0.9rem;font-weight:500;opacity:0.6;margin-top:4px;'>
-      관리규약 · 주차규약 · 커뮤니티센터 규약
-    </div>
-  </div>
-</div>""",
-    unsafe_allow_html=True,
 )
+
+
 
 # ─────────────────────────────────────────
 # 1. API 키
@@ -362,42 +338,37 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
 # ─────────────────────────────────────────
 # 7. 카드 렌더링
 # ─────────────────────────────────────────
-# ─────────────────────────────────────────
-# 7. 카드 렌더링
-# ─────────────────────────────────────────
-# 다크 모드에 어울리는 은은하고 세련된 뱃지 색상
 DOC_COLORS = {
-    "관리규약":         ("rgba(59, 130, 246, 0.15)", "#60a5fa"), # Blue
-    "주차규약":         ("rgba(16, 185, 129, 0.15)", "#34d399"), # Emerald
-    "커뮤니티센터 규약": ("rgba(245, 158, 11, 0.15)", "#fbbf24"), # Amber
+    "관리규약":         "#3b82f6", # 블루
+    "주차규약":         "#10b981", # 에메랄드
+    "커뮤니티센터 규약": "#f59e0b", # 오렌지
 }
 
 def render_article_card(art: dict, keyword: str = "") -> None:
     content = art["content"]
     
-    # 다크 모드에 어울리는 은은한 하이라이트 (시인성 개선)
+    # 검색어 형광펜 (라이트/다크 모두 잘 보이는 노란 투명색)
     if keyword:
         content = re.sub(
             f"(?i)({re.escape(keyword)})",
-            r"<mark style='background:rgba(212, 175, 55, 0.25);color:#d4af37;padding:0 4px;border-radius:4px;font-weight:600;'>\1</mark>",
+            r"<mark style='background-color:rgba(250, 204, 21, 0.3); border-radius:3px; padding:0 4px;'>\1</mark>",
             content,
         )
         
-    bg_color, text_color = DOC_COLORS.get(art["doc"], ("rgba(100, 116, 139, 0.15)", "#94a3b8"))
+    bc = DOC_COLORS.get(art["doc"], "#888888")
     
     st.html(f"""
-<div style='background:#15181e;border:1px solid #262a33;border-radius:10px;
-            padding:1.2rem 1.5rem;margin-bottom:1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);'>
+<div style='border: 1px solid rgba(150, 150, 150, 0.2); border-radius:12px;
+            padding:1.5rem; margin-bottom:1.2rem;
+            background-color: var(--secondary-background-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);'>
   <div style='display:flex;align-items:center;margin-bottom:12px;gap:10px'>
-    <span style='background:{bg_color};color:{text_color};padding:4px 10px;
-                 border-radius:6px;font-size:0.75rem;font-weight:600;
-                 letter-spacing:0.02em;'>{art["doc"]}</span>
-    <span style='font-size:1.05rem;font-weight:700;color:#f8fafc;
-                 letter-spacing:-0.01em;'>{art["title"]}</span>
+    <span style='background-color:{bc};color:white;padding:4px 10px;
+                 border-radius:6px;font-size:0.8rem;font-weight:600;'>{art["doc"]}</span>
+    <span style='font-size:1.1rem;font-weight:800;color:var(--text-color);'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.9rem;color:#cbd5e1;line-height:1.7;
-              border-top:1px dashed #262a33;padding-top:12px;'>
+  <div style='font-size:0.95rem;line-height:1.7;opacity:0.85;color:var(--text-color);
+              border-top:1px dashed rgba(150, 150, 150, 0.2);padding-top:12px;'>
     {content.replace(chr(10), '<br>')}
   </div>
 </div>""")
