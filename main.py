@@ -270,12 +270,13 @@ with tab_keyword:
             # AI 요약
             if use_ai_summary and api_ready:
                 # 요약용: 조항당 200자로 제한해 토큰 절약
-                ctx_items = [f"[{a['doc']}] {a['title']}\n{a['content'][:200]}" for a in matched[:8]]
-                ctx = "\n\n".join(ctx_items)
+                ctx = "\n\n".join(
+                    f"[{a['doc']}] {a['title']}\n{a['content']}"
+                    for a in matched[:3]
+                )
                 prompt = (
-                    f"아파트 규약에서 '{keyword}' 키워드로 검색된 조항들이야.\n"
-                    f"핵심 내용을 3~5줄로 간결하게 요약해줘. 규약 이름과 조항 번호를 반드시 포함해줘.\n\n"
-                    f"{ctx}"
+                    f"아파트 규약에서 '{keyword}' 관련 조항이야.\n"
+                    f"핵심 내용을 2~3줄로 요약하고 조항번호를 포함해줘.\n\n{ctx}"
                 )
                 with st.spinner("AI가 검색 결과를 요약하는 중..."):
                     try:
@@ -394,31 +395,22 @@ with tab_ai:
                         if len(relevant) >= 15:
                             break
 
-                    # 관련 조항이 없으면 전체에서 앞 5개만 사용
+                    # 관련 조항 없으면 앞 3개
                     if not relevant:
-                        relevant = all_arts[:5]
+                        relevant = all_arts[:3]
 
-                    # 최대 8개, 조항당 300자로 잘라서 토큰 절약
-                    relevant = relevant[:8]
-                    ctx_parts = []
-                    for a in relevant:
-                        body = a["content"][:300].strip()
-                        ctx_parts.append(f"[{a['doc']}] {a['title']}\n{body}")
-                    ctx = "\n\n".join(ctx_parts)
+                    # 최대 3개, 내용 전체 온전히 전달
+                    relevant = relevant[:3]
+                    ctx = "\n\n".join(
+                        f"[{a['doc']}] {a['title']}\n{a['content']}"
+                        for a in relevant
+                    )
 
-                    full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
-아래 [관련 조항]을 바탕으로 [질문]에 간결하고 정확하게 답변해줘.
-
-답변 형식:
-1. 핵심 답변 (3줄 이내)
-2. 근거: 규약명 + 조항번호 (예: 주차규약 제20조)
-3. 규약에 없으면 "해당 내용을 찾을 수 없습니다"라고 답해줘
-
-[관련 조항]
-{ctx}
-
-[질문]
-{prompt}"""
+                    full_prompt = (
+                        f"아파트 규약 AI야. 아래 조항을 바탕으로 질문에 답해줘.\n"
+                        f"핵심 답변 2~3줄 + 근거 조항번호를 명시해줘.\n\n"
+                        f"조항:\n{ctx}\n\n질문: {prompt}"
+                    )
 
                     response_text = ai_generate(full_prompt)
 
