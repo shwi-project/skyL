@@ -163,14 +163,15 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 직접 호출 — 패키지 버전 무관."""
+    """Gemini REST API 직접 호출 — API 키를 헤더로 전달."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models"
-        f"/gemini-1.5-flash:generateContent?key={api_key}"
-    )
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key,
+    }
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    resp = requests.post(url, json=payload, timeout=60)
+    resp = requests.post(url, headers=headers, json=payload, timeout=120)
     resp.raise_for_status()
     data = resp.json()
     return data["candidates"][0]["content"]["parts"][0]["text"]
