@@ -7,7 +7,7 @@ from pypdf import PdfReader
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-st.set_page_config(page_title="아파트 규약 검색", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="롯데캐슬 스카이엘 규약 검색", page_icon="🏢", layout="wide")
 
 st.title("🏢 아파트 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
