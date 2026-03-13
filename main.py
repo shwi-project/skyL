@@ -52,9 +52,11 @@ st.markdown("""
     line-height: 1.7 !important;
 }
 
-/* 채팅 메시지 컨테이너 — 아바타 상단 정렬 */
+/* 채팅 메시지 컨테이너 — 아바타 중앙 정렬, 실선 제거 */
 [data-testid="stChatMessage"] {
-    align-items: flex-start !important;
+    align-items: center !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
 }
 
 /* 채팅 아바타 크기 및 정렬 */
@@ -63,8 +65,8 @@ st.markdown("""
     width: 20px !important;
     height: 20px !important;
     min-width: 20px !important;
-    margin-top: 0px !important;
     flex-shrink: 0 !important;
+    align-self: center !important;
 }
 
 /* 타이틀 아래 여백 축소 */
