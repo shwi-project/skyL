@@ -16,20 +16,14 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
 
-/* 타이틀 제외한 본문 폰트 */
-p, li, span, div, label, input, textarea, button,
-[data-testid="stMarkdownContainer"],
-[data-testid="stChatInput"],
-[data-testid="stChatMessage"] {
+/* 텍스트 영역에만 폰트 적용 — 아이콘/이모지 제외 */
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li,
+[data-testid="stChatInput"] textarea,
+[data-testid="stTextInput"] input {
     font-family: 'Noto Sans KR', sans-serif !important;
-}
-
-/* expander 아이콘 텍스트 깨짐 방지 */
-[data-testid="stExpander"] summary span {
-    font-family: 'Noto Sans KR', sans-serif !important;
-}
-[data-testid="stExpander"] summary svg {
-    flex-shrink: 0;
 }
 
 /* 타이틀 아래 여백 축소 */
