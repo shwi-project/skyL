@@ -184,7 +184,7 @@ def ai_generate(prompt: str) -> str:
     }
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 512},
+        "generationConfig": {"maxOutputTokens": 1024},
     }
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -223,6 +223,9 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         if body_lines and sum(1 for l in body_lines if len(l.strip()) < 20) / len(body_lines) > 0.7:
             continue
         title = lines[0].strip()
+        # 첨부자료 등으로 인해 비정상적으로 긴 블록은 1500자로 제한
+        if len(block) > 1500:
+            block = block[:1500].strip() + "...(이하 생략)"
         articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
