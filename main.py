@@ -429,18 +429,53 @@ with tab_ai:
                     if response_text:
                         st.markdown(response_text)
 
-                        # 답변에서 언급된 조항 번호 추출 → 원문 첨부
+                        # 답변에서 "규약명 + 조항번호" 쌍으로 추출 → 정확한 매칭
                         all_arts = []
                         for doc_name in selected:
                             all_arts += get_all_articles(doc_name, pdf_texts[doc_name])
 
-                        mentioned = set(re.findall(r"제\s*(\d+)\s*조", response_text))
+                        # 규약명 키워드 → doc명 매핑
+                        DOC_ALIAS = {
+                            "관리규약": "관리규약",
+                            "주차규약": "주차규약",
+                            "주차관리": "주차규약",
+                            "커뮤니티": "커뮤니티센터 규약",
+                            "커뮤니티센터": "커뮤니티센터 규약",
+                        }
+
                         related = []
-                        for num in mentioned:
+                        seen_keys = set()
+
+                        # "관리규약 제16조", "주차규약 제20조" 패턴 추출
+                        pairs = re.findall(
+                            r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)\s*제\s*(\d+)\s*조",
+                            response_text
+                        )
+                        for alias, num in pairs:
+                            doc_name = DOC_ALIAS.get(alias.strip(), alias.strip())
+                            key = (doc_name, num)
+                            if key in seen_keys:
+                                continue
+                            seen_keys.add(key)
                             pat = re.compile(rf"제\s*{num}\s*조")
                             for art in all_arts:
-                                if pat.search(art["title"]) and art not in related:
+                                if art["doc"] == doc_name and pat.search(art["title"]):
                                     related.append(art)
+                                    break
+
+                        # 쌍 매칭 실패 시 조항 번호만으로 fallback (언급된 규약 한정)
+                        if not related:
+                            mentioned_docs = set()
+                            for alias in DOC_ALIAS:
+                                if alias in response_text:
+                                    mentioned_docs.add(DOC_ALIAS[alias])
+                            nums = re.findall(r"제\s*(\d+)\s*조", response_text)
+                            for num in set(nums):
+                                pat = re.compile(rf"제\s*{num}\s*조")
+                                for art in all_arts:
+                                    if art["doc"] in mentioned_docs and pat.search(art["title"]):
+                                        if art not in related:
+                                            related.append(art)
 
                         if related:
                             with st.expander("📋 관련 조항 원문 보기", expanded=False):
