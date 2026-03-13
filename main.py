@@ -82,7 +82,6 @@ if not pdf_texts:
     st.stop()
 
 loaded_names = list(pdf_texts.keys())
-st.success(f"✅ 로드된 규약: {', '.join(loaded_names)}")
 
 # ─────────────────────────────────────────
 # 3. 검색 대상 선택
@@ -311,25 +310,29 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    if "last_answer" not in st.session_state:
-        st.session_state.last_answer = None
+    # session_state 초기화
+    if "ai_question" not in st.session_state:
+        st.session_state.ai_question  = None
+        st.session_state.ai_response  = None
+        st.session_state.ai_articles  = []
 
-    # 직전 답변 표시
-    if st.session_state.last_answer:
-        ans = st.session_state.last_answer
+    # 이전 답변 표시
+    if st.session_state.ai_question:
         with st.chat_message("user"):
-            st.markdown(ans["question"])
+            st.markdown(st.session_state.ai_question)
         with st.chat_message("assistant"):
-            st.markdown(ans["response"])
-            if ans.get("articles"):
+            st.markdown(st.session_state.ai_response)
+            if st.session_state.ai_articles:
                 with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                    for art in ans["articles"]:
+                    for art in st.session_state.ai_articles:
                         render_article_card(art)
 
-    # 입력창 — 새 질문 시 이전 답변 자동 교체
+    # 입력창
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
-        # 즉시 이전 답변 초기화 후 재렌더링
-        st.session_state.last_answer = None
+        # 이전 답변 초기화
+        st.session_state.ai_question = None
+        st.session_state.ai_response = None
+        st.session_state.ai_articles = []
 
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -341,9 +344,10 @@ with tab_ai:
                         "너는 아파트 규약 전문 AI 비서야.\n"
                         "아래 규약 전문을 읽고 질문에 답변해줘.\n\n"
                         "규칙:\n"
-                        "- 형식 레이블(\"핵심 답변:\", \"근거:\" 등) 없이 자연스럽게 답변해줘\n"
-                        "- 답변 마지막에 근거 조항을 한 줄로 명시해줘 (예: 📌 관리규약 제16조)\n"
-                        "- 질문과 직접 관련된 규약의 조항만 근거로 써줘\n"
+                        "- 형식 레이블 없이 자연스럽게 답변해줘\n"
+                        "- 답변 마지막에 근거 조항을 반드시 아래 형식으로만 써줘:\n"
+                        "  📌 관리규약 제N조  또는  📌 주차규약 제N조  또는  📌 커뮤니티센터 규약 제N조\n"
+                        "- 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 셋 중 하나만 사용해\n"
                         "- 규약에 없는 내용은 \"해당 규약에서 찾을 수 없습니다\"라고만 답해줘\n\n"
                         f"[규약 전문]\n{combined_text}\n\n[질문]\n{prompt}"
                     )
@@ -360,11 +364,10 @@ with tab_ai:
                             for art in related:
                                 render_article_card(art)
 
-                    st.session_state.last_answer = {
-                        "question": prompt,
-                        "response": response_text,
-                        "articles": related,
-                    }
+                    # 저장
+                    st.session_state.ai_question = prompt
+                    st.session_state.ai_response = response_text
+                    st.session_state.ai_articles = related
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
