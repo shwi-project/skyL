@@ -174,7 +174,6 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
     """Gemini REST API 직접 호출 — 429 시 최대 3회 재시도."""
-    import time
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
     model = "gemini-2.5-flash"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -186,18 +185,36 @@ def ai_generate(prompt: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": 8192},
     }
+    import time
     for attempt in range(3):
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        resp = requests.post(url, headers=headers, json=payload, timeout=120)
         if resp.status_code == 429:
-            # 재시도 전에 전체 에러 내용 저장
             last_err = resp.text
-            wait = (attempt + 1) * 10
+            wait = (attempt + 1) * 15
             time.sleep(wait)
             continue
         if not resp.ok:
             raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
         data = resp.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        candidate = data["candidates"][0]
+        text = candidate["content"]["parts"][0]["text"]
+        finish = candidate.get("finishReason", "")
+
+        # 토큰 한도로 잘렸으면 이어쓰기 요청
+        if finish == "MAX_TOKENS":
+            cont_payload = {
+                "contents": [
+                    {"role": "user",  "parts": [{"text": prompt}]},
+                    {"role": "model", "parts": [{"text": text}]},
+                    {"role": "user",  "parts": [{"text": "이어서 계속 작성해줘."}]},
+                ],
+                "generationConfig": {"maxOutputTokens": 8192},
+            }
+            cont_resp = requests.post(url, headers=headers, json=cont_payload, timeout=120)
+            if cont_resp.ok:
+                cont_data = cont_resp.json()
+                text += cont_data["candidates"][0]["content"]["parts"][0]["text"]
+        return text
     raise RuntimeError(f"429 한도 초과 — 전체 에러: {last_err}")
 
 # ─────────────────────────────────────────
@@ -325,10 +342,12 @@ with tab_keyword:
                     f"<span style='font-size:1rem;font-weight:700;color:#222'>"
                     f"{art['title']}</span>"
                 )
+                # \n을 <br>로 변환해서 HTML 카드에서 줄바꿈 표시
+                highlighted_html = highlighted.replace("\n", "<br>")
                 body_html = (
                     "<div style='font-size:0.88rem;color:#333;line-height:1.7;"
-                    "white-space:pre-wrap;margin-top:8px'>"
-                    + highlighted + "</div>"
+                    "margin-top:8px'>"
+                    + highlighted_html + "</div>"
                 )
                 card_html = f"""
 <div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
@@ -370,7 +389,7 @@ with tab_ai:
                  border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
     &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.85rem;color:#444;line-height:1.7;white-space:pre-wrap'>{art["content"]}</div>
+  <div style='font-size:0.85rem;color:#444;line-height:1.7'>{art["content"].replace(chr(10), "<br>")}</div>
 </div>""")
 
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
@@ -439,7 +458,7 @@ with tab_ai:
                  border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
     &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.85rem;color:#444;line-height:1.7;white-space:pre-wrap'>{art["content"]}</div>
+  <div style='font-size:0.85rem;color:#444;line-height:1.7'>{art["content"].replace(chr(10), "<br>")}</div>
 </div>""")
 
                         st.session_state.messages.append({
