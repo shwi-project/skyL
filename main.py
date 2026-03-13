@@ -124,7 +124,6 @@ for i, doc in enumerate(DOC_ORDER):
             type="primary" if is_active else "secondary",
         ):
             st.session_state.selected_doc = doc
-            st.rerun()
 
 selected = st.session_state.selected_doc
 selected_names = [selected]
@@ -431,7 +430,7 @@ with tab_ai:
                         all_arts += get_articles(dn, pdf_texts[dn])
                     related = find_related_articles(response_text, all_arts)
                     if related:
-                        with st.expander("관련 조항 원문 보기", expanded=False):
+                        with st.expander("📋 관련 조항 원문 보기", expanded=False):
                             for art in related:
                                 render_article_card(art)
 
@@ -448,6 +447,6 @@ with tab_ai:
         with st.chat_message("assistant"):
             st.markdown(st.session_state.ai_response)
             if st.session_state.ai_articles:
-                with st.expander("관련 조항 원문 보기", expanded=False):
+                with st.expander("📋 관련 조항 원문 보기", expanded=False):
                     for art in st.session_state.ai_articles:
                         render_article_card(art)
