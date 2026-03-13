@@ -64,6 +64,10 @@ def clean_management(text: str) -> str:
     text = re.sub(r"(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])", r"\n\1", text)
     text = re.sub(r"([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])[\s\n]+", r"\1 ", text)
     text = re.sub(r"([가-힣a-zA-Z0-9,])\n([가-힣a-zA-Z0-9\(])", r"\1 \2", text)
+    # "오후 10 6 ." 같은 분리된 숫자 패턴 정리
+    text = re.sub(r"\b(\d+)\s+(\d+)\s+\.", r"\1~\2.", text)
+    # "행위 1. ," → "행위 1.," 불필요한 공백 제거
+    text = re.sub(r"(\d+\.)\s+,", r"\1,", text)
     text = re.sub(r"[ \t]{3,}", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
@@ -105,7 +109,7 @@ CLEANER_MAP = {
 
 
 @st.cache_data(show_spinner=False)
-def load_pdf_text(pdf_path: str, cleaner_key: str, _v: int = 1) -> str:
+def load_pdf_text(pdf_path: str, cleaner_key: str, _v: int = 2) -> str:
     if not os.path.exists(pdf_path):
         return ""
     cleaner = CLEANER_MAP[cleaner_key]
@@ -204,7 +208,14 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         lines = [l for l in block.splitlines() if l.strip()]
         if len(lines) <= 2:
             continue
-        title = lines[0].strip()
+        # 제목: "제N조 한글제목" 만 추출, 본문이 붙어있으면 잘라냄
+        raw_title = lines[0].strip()
+        tm = re.match(
+            r"(제\s*\d+\s*조(?:의\s*\d+)?(?:\s+[가-힣a-zA-Z·,]+){0,4}?)"
+            r"(?=\s+(?:이\s|은\s|는\s|을\s|를\s|에\s|영\s제|이하|본\s|입주|관리|동별|선거|공동|각\s|아래|다음)|\s*①|$)",
+            raw_title
+        )
+        title = tm.group(1).strip() if tm else raw_title[:30]
         if len(block) > 1500:
             block = block[:1500].strip() + "...(이하 생략)"
         articles.append({"doc": doc_name, "title": title, "content": block})
@@ -212,7 +223,7 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
 
 
 @st.cache_data(show_spinner=False)
-def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
+def get_articles(doc_name: str, text: str, _v: int = 2) -> list[dict]:
     return parse_articles(doc_name, text)
 
 
