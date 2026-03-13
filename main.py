@@ -166,9 +166,27 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
         articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
+def parse_attachments(doc_name: str, text: str) -> list[dict]:
+    """첨부 #N 블록을 조항처럼 파싱."""
+    results = []
+    # "▣ 첨부 #N" 또는 "첨부 #N" 으로 시작하는 블록
+    pat = re.compile(r"((?:▣\s*)?첨부\s*#\d+[^\n]*(?:\n(?!(?:▣\s*)?첨부\s*#\d+).+)*)", re.MULTILINE)
+    for m in pat.finditer(text):
+        block = m.group(0).strip()
+        lines = [l for l in block.splitlines() if l.strip()]
+        if len(lines) <= 1:
+            continue
+        title = lines[0].strip().replace("▣", "").strip()
+        if len(block) > 1500:
+            block = block[:1500].strip() + "...(이하 생략)"
+        results.append({"doc": doc_name, "title": title, "content": block})
+    return results
+
 @st.cache_data(show_spinner=False)
 def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
-    return parse_articles(doc_name, text)
+    arts = parse_articles(doc_name, text)
+    arts += parse_attachments(doc_name, text)
+    return arts
 
 # ─────────────────────────────────────────
 # 6. 근거 조항 추출 (AI 응답 → 규약명+조번호)
@@ -204,6 +222,7 @@ def extract_pairs(txt: str) -> list[tuple]:
 def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict]:
     related   = []
     seen_keys = set()
+    # 제N조 매칭
     for doc_name, num in extract_pairs(response_text):
         key = (doc_name, num)
         if key in seen_keys:
@@ -212,6 +231,14 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
         pat = re.compile(rf"제\s*{num}\s*조")
         for art in all_arts:
             if art["doc"] == doc_name and pat.search(art["title"]):
+                related.append(art)
+                break
+    # 첨부 #N 매칭
+    attach_pat = re.compile(r"첨부\s*#(\d+)")
+    for am in attach_pat.finditer(response_text):
+        attach_title = f"첨부 #{am.group(1)}"
+        for art in all_arts:
+            if attach_title in art["title"] and art not in related:
                 related.append(art)
                 break
     return related
@@ -364,11 +391,6 @@ with tab_ai:
                         all_arts += get_articles(dn, pdf_texts[dn])
 
                     related = find_related_articles(response_text, all_arts)
-
-                    # 디버그
-                    pairs = extract_pairs(response_text)
-                    st.caption(f"🔍 AI응답 마지막 100자: {repr(response_text[-100:])}")
-                    st.caption(f"🔍 추출 쌍: {pairs} / 전체조항수: {len(all_arts)}")
 
                     if related:
                         with st.expander("📋 관련 조항 원문 보기", expanded=False):
