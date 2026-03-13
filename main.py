@@ -25,11 +25,11 @@ except Exception:
     logo_html = "<span style='font-size:1.4rem;vertical-align:middle;margin-right:8px'>🏰</span>"
 
 st.markdown(
-    f"""<div style='display:flex;align-items:center;margin-bottom:4px'>
+    f"""<div style='display:flex;align-items:flex-start;margin-bottom:4px'>
     {logo_html}
-    <div>
-      <span style='font-size:1.1rem;font-weight:700;line-height:1.3'>롯데캐슬스카이엘 규약 통합 검색</span><br>
-      <span style='font-size:0.8rem;color:#888'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</span>
+    <div style='line-height:1.2'>
+      <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
+      <div style='font-size:0.78rem;color:#999;margin-top:2px'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</div>
     </div></div>""",
     unsafe_allow_html=True,
 )
