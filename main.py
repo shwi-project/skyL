@@ -176,7 +176,7 @@ def ai_generate(prompt: str) -> str:
     """Gemini REST API 직접 호출 — 429 시 최대 3회 재시도."""
     import time
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model = "gemini-2.0-flash-001"
+    model = "gemini-2.5-flash"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {
         "Content-Type": "application/json",
