@@ -138,15 +138,8 @@ with tab_ai:
     # 모델 초기화 (캐싱)
     @st.cache_resource
     def get_model():
-        available = [
-            m.name for m in genai.list_models()
-            if "generateContent" in m.supported_generation_methods
-        ]
-        name = (
-            "models/gemini-2.0-flash" if "models/gemini-2.0-flash" in available
-            else "models/gemini-1.5-flash"
-        )
-        return genai.GenerativeModel(name)
+        # list_models() 제거 — 모델명 직접 지정
+        return genai.GenerativeModel("gemini-2.0-flash")    
 
     model = get_model()
 
@@ -198,4 +191,5 @@ with tab_ai:
         if st.button("🗑️ 대화 초기화"):
             st.session_state.messages = []
             st.rerun()
+
 
