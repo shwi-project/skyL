@@ -332,10 +332,6 @@ with tab_keyword:
 # ══════════════════════════════════════════
 # TAB B — AI 질문 검색
 # ══════════════════════════════════════════
-
-# chat_input은 탭 밖에 있어야 정상 동작 (Streamlit 제약)
-ai_prompt = st.chat_input("💬 AI에게 질문하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)")
-
 with tab_ai:
     if not api_ready:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
@@ -346,28 +342,12 @@ with tab_ai:
         st.session_state.ai_response = None
         st.session_state.ai_articles = []
 
-    # 새 질문 들어오면 이전 내용 즉시 초기화
-    if ai_prompt:
-        st.session_state.ai_question = None
-        st.session_state.ai_response = None
-        st.session_state.ai_articles = []
+    ai_prompt = st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)")
 
-    # 이전 답변 표시 (새 질문이 없을 때만)
-    if not ai_prompt and st.session_state.ai_question:
-        with st.chat_message("user"):
-            st.markdown(st.session_state.ai_question)
-        with st.chat_message("assistant"):
-            st.markdown(st.session_state.ai_response)
-            if st.session_state.ai_articles:
-                with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                    for art in st.session_state.ai_articles:
-                        render_article_card(art)
-
-    # 새 질문 처리
     if ai_prompt:
+        # 새 질문: 이전 내용 표시 없이 바로 처리
         with st.chat_message("user"):
             st.markdown(ai_prompt)
-
         with st.chat_message("assistant"):
             with st.spinner("AI가 답변을 생성하는 중..."):
                 try:
@@ -390,7 +370,6 @@ with tab_ai:
                     all_arts = []
                     for dn in selected:
                         all_arts += get_articles(dn, pdf_texts[dn])
-
                     related = find_related_articles(response_text, all_arts)
 
                     if related:
@@ -404,3 +383,15 @@ with tab_ai:
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
+
+    else:
+        # 새 질문 없을 때만 이전 답변 표시
+        if st.session_state.ai_question:
+            with st.chat_message("user"):
+                st.markdown(st.session_state.ai_question)
+            with st.chat_message("assistant"):
+                st.markdown(st.session_state.ai_response)
+                if st.session_state.ai_articles:
+                    with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                        for art in st.session_state.ai_articles:
+                            render_article_card(art)
