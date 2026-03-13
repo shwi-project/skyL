@@ -167,10 +167,12 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
     return articles
 
 def parse_attachments(doc_name: str, text: str) -> list[dict]:
-    """첨부 #N 블록을 조항처럼 파싱."""
+    """첨부 #N / 별표N 블록을 조항처럼 파싱."""
     results = []
-    # "▣ 첨부 #N" 또는 "첨부 #N" 으로 시작하는 블록
-    pat = re.compile(r"((?:▣\s*)?첨부\s*#\d+[^\n]*(?:\n(?!(?:▣\s*)?첨부\s*#\d+).+)*)", re.MULTILINE)
+    pat = re.compile(
+        r"((?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)[^\n]*(?:\n(?!(?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)).+)*)",
+        re.MULTILINE
+    )
     for m in pat.finditer(text):
         block = m.group(0).strip()
         lines = [l for l in block.splitlines() if l.strip()]
@@ -239,6 +241,14 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
         attach_title = f"첨부 #{am.group(1)}"
         for art in all_arts:
             if attach_title in art["title"] and art not in related:
+                related.append(art)
+                break
+    # 별표N 매칭
+    byulpyo_pat = re.compile(r"별표\s*(\d+)")
+    for bm in byulpyo_pat.finditer(response_text):
+        num = bm.group(1)
+        for art in all_arts:
+            if re.search(rf"별표\s*{num}", art["title"]) and art not in related:
                 related.append(art)
                 break
     return related
