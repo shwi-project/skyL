@@ -274,11 +274,12 @@ with tab_keyword:
                 # 요약용: 조항당 200자로 제한해 토큰 절약
                 ctx = "\n\n".join(
                     f"[{a['doc']}] {a['title']}\n{a['content']}"
-                    for a in matched[:3]
+                    for a in matched[:5]
                 )
                 prompt = (
-                    f"아파트 규약에서 '{keyword}' 관련 조항이야.\n"
-                    f"핵심 내용을 2~3줄로 요약하고 조항번호를 포함해줘.\n\n{ctx}"
+                    f"너는 아파트 규약 전문 AI야.\n"
+                    f"아래 조항들을 읽고 '{keyword}' 관련 핵심 내용을 3~5줄로 요약해줘.\n"
+                    f"규약명과 조항번호를 반드시 포함해줘.\n\n{ctx}"
                 )
                 with st.spinner("AI가 검색 결과를 요약하는 중..."):
                     try:
@@ -401,17 +402,18 @@ with tab_ai:
                     if not relevant:
                         relevant = all_arts[:3]
 
-                    # 최대 3개, 내용 전체 온전히 전달
-                    relevant = relevant[:3]
+                    # 최대 7개, 전체 내용 전달
+                    relevant = relevant[:7]
                     ctx = "\n\n".join(
                         f"[{a['doc']}] {a['title']}\n{a['content']}"
                         for a in relevant
                     )
 
                     full_prompt = (
-                        f"아파트 규약 AI야. 아래 조항을 바탕으로 질문에 답해줘.\n"
-                        f"핵심 답변 2~3줄 + 근거 조항번호를 명시해줘.\n\n"
-                        f"조항:\n{ctx}\n\n질문: {prompt}"
+                        f"너는 아파트 규약 전문 AI 비서야.\n"
+                        f"아래 [관련 조항]을 꼼꼼히 읽고 [질문]에 정확하게 답변해줘.\n"
+                        f"답변 형식: 1) 핵심 답변 2) 근거 조항번호\n\n"
+                        f"[관련 조항]\n{ctx}\n\n[질문] {prompt}"
                     )
 
                     response_text = ai_generate(full_prompt)
