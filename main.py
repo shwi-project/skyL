@@ -184,7 +184,7 @@ def ai_generate(prompt: str) -> str:
     }
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 1024},
+        "generationConfig": {"maxOutputTokens": 2048},
     }
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -275,15 +275,17 @@ with tab_keyword:
             # AI 요약
             if use_ai_summary and api_ready:
                 # 요약용: 조항당 200자로 제한해 토큰 절약
-                ctx = "\n\n".join(
-                    f"[{a['doc']}] {a['title']}\n{a['content']}"
-                    for a in matched[:5]
+                # 검색된 규약의 전체 텍스트 전달
+                docs_in_results = list({a["doc"] for a in matched})
+                full_ctx = "\n\n".join(
+                    f"=== [{n}] ===\n{pdf_texts[n]}"
+                    for n in docs_in_results if n in pdf_texts
                 )
-                prompt = (
-                    f"너는 아파트 규약 전문 AI야.\n"
-                    f"아래 조항들을 읽고 '{keyword}' 관련 핵심 내용을 3~5줄로 요약해줘.\n"
-                    f"규약명과 조항번호를 반드시 포함해줘.\n\n{ctx}"
-                )
+                prompt = f"""너는 아파트 규약 전문 AI야.
+아래 규약에서 '{keyword}' 관련 내용을 찾아 핵심 내용을 요약해줘.
+규약명과 조항번호를 반드시 포함하고, 구체적인 기준(시간, 금액, 횟수 등)이 있으면 명시해줘.
+
+{full_ctx}"""
                 with st.spinner("AI가 검색 결과를 요약하는 중..."):
                     try:
                         result = ai_generate(prompt)
@@ -388,36 +390,20 @@ with tab_ai:
                     for dn in selected:
                         all_arts += get_all_articles(dn, pdf_texts[dn])
 
-                    # 각 키워드가 하나라도 포함된 조항 수집 (최대 15개)
-                    relevant = []
-                    seen = set()
-                    for art in all_arts:
-                        text_lower = art["content"].lower()
-                        if any(w.lower() in text_lower for w in q_words):
-                            key = (art["doc"], art["title"])
-                            if key not in seen:
-                                seen.add(key)
-                                relevant.append(art)
-                        if len(relevant) >= 15:
-                            break
+                    # 규약 전문 전체를 전달 (45,000토큰 = Tier1 한도의 4.5%)
+                    full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
+아래 규약 전문을 꼼꼼히 읽고 질문에 정확하게 답변해줘.
 
-                    # 관련 조항 없으면 앞 3개
-                    if not relevant:
-                        relevant = all_arts[:3]
+답변 형식:
+1. 핵심 답변 (명확하고 구체적으로)
+2. 근거: 규약명 + 조항번호 (예: 주차규약 제20조 제2항)
+3. 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고 답해줘
 
-                    # 최대 7개, 전체 내용 전달
-                    relevant = relevant[:7]
-                    ctx = "\n\n".join(
-                        f"[{a['doc']}] {a['title']}\n{a['content']}"
-                        for a in relevant
-                    )
+[규약 전문]
+{combined_text}
 
-                    full_prompt = (
-                        f"너는 아파트 규약 전문 AI 비서야.\n"
-                        f"아래 [관련 조항]을 꼼꼼히 읽고 [질문]에 정확하게 답변해줘.\n"
-                        f"답변 형식: 1) 핵심 답변 2) 근거 조항번호\n\n"
-                        f"[관련 조항]\n{ctx}\n\n[질문] {prompt}"
-                    )
+[질문]
+{prompt}"""
 
                     response_text = ai_generate(full_prompt)
 
