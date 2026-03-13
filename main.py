@@ -229,6 +229,10 @@ def render_article_card(art: dict, keyword: str = "") -> None:
 # ─────────────────────────────────────────
 tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
 
+# AI 질문용 chat_input은 탭 바깥에 배치해야 화면 하단 고정됨
+# 탭 안에 넣으면 Streamlit 버그로 스크롤 따라 내려감
+ai_prompt_input = st.chat_input("💬 AI에게 질문하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)")
+
 # ══════════════════════════════════════════
 # TAB A — 키워드 검색
 # ══════════════════════════════════════════
@@ -312,8 +316,8 @@ with tab_ai:
                     for art in msg["articles"]:
                         render_article_card(art)
 
-    # 입력창 (Streamlit이 자동으로 하단 고정)
-    if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
+    prompt = ai_prompt_input
+    if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -353,13 +357,24 @@ with tab_ai:
                         result  = []
                         clean   = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", txt)
                         doc_pat = re.compile(
-                            r"(관리규약|주차규약|주차관리규정?|커뮤니티센터?\s*규약|운영규정)"
+                            r"(관리규약"
+                            r"|주차\s*관리\s*규정?"
+                            r"|주차\s*규약"
+                            r"|커뮤니티\s*센터?\s*규약"
+                            r"|주민공동시설\s*운영규정?"
+                            r"|운영규정)"
                         )
                         for dm in doc_pat.finditer(clean):
-                            doc_name = ALIAS_MAP.get(dm.group(0).strip(), dm.group(0).strip())
-                            after    = clean[dm.end():]
-                            nxt      = doc_pat.search(after)
-                            scope    = after[:nxt.start()] if nxt else after
+                            raw = dm.group(0).strip()
+                            if "관리규약" in raw and "주차" not in raw:
+                                doc_name = "관리규약"
+                            elif "주차" in raw:
+                                doc_name = "주차규약"
+                            else:
+                                doc_name = "커뮤니티센터 규약"
+                            after = clean[dm.end():]
+                            nxt   = doc_pat.search(after)
+                            scope = after[:nxt.start()] if nxt else after
                             for am in re.finditer(r"제\s*(\d+)\s*조", scope):
                                 result.append((doc_name, am.group(1)))
                         return list(dict.fromkeys(result))
