@@ -233,25 +233,15 @@ with tab_keyword:
 
         for doc_name in selected:
             articles = get_all_articles(doc_name, pdf_texts[doc_name])
-
             if articles:
-                for art in articles:
-                    if keyword_lower in art["content"].lower():
-                        matched.append(art)
-            else:
-                # 조항 파싱이 안 된 경우 라인 기반 fallback
-                lines = pdf_texts[doc_name].splitlines()
-                for i, line in enumerate(lines):
-                    if keyword_lower in line.lower():
-                        start = max(0, i - 2)
-                        end   = min(len(lines), i + 5)
-                        block = "\n".join(lines[start:end]).strip()
-                        if block:
-                            matched.append({
-                                "doc": doc_name,
-                                "title": f"{i+1}번째 줄 근처",
-                                "content": block,
-                            })
+                # 제목에 키워드 있는 것 우선, 본문만 있는 것 후순위
+                title_match = [a for a in articles if keyword_lower in a["title"].lower()]
+                body_match  = [a for a in articles if keyword_lower in a["content"].lower()
+                               and keyword_lower not in a["title"].lower()]
+                matched.extend(title_match + body_match)
+
+        # 최대 10개로 제한
+        matched = matched[:10]
 
         if not matched:
             st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
@@ -260,7 +250,9 @@ with tab_keyword:
 
             # AI 요약
             if use_ai_summary and api_ready:
-                ctx = "\n\n".join(f"[{a['doc']}]\n{a['content']}" for a in matched)
+                # 요약용: 조항당 200자로 제한해 토큰 절약
+                ctx_items = [f"[{a['doc']}] {a['title']}\n{a['content'][:200]}" for a in matched[:8]]
+                ctx = "\n\n".join(ctx_items)
                 prompt = (
                     f"아파트 규약에서 '{keyword}' 키워드로 검색된 조항들이야.\n"
                     f"핵심 내용을 3~5줄로 간결하게 요약해줘. 규약 이름과 조항 번호를 반드시 포함해줘.\n\n"
@@ -383,17 +375,17 @@ with tab_ai:
                         if len(relevant) >= 15:
                             break
 
-                    # 관련 조항이 없으면 전체에서 앞 10개만 사용
+                    # 관련 조항이 없으면 전체에서 앞 5개만 사용
                     if not relevant:
-                        relevant = all_arts[:10]
+                        relevant = all_arts[:5]
 
-                    ctx = "\n\n".join(
-                        f"[{a['doc']}] {a['title']}\n{a['content']}"
-                        for a in relevant
-                    )
-                    # 토큰 절약: 최대 6000자로 제한
-                    if len(ctx) > 6000:
-                        ctx = ctx[:6000] + "\n...(이하 생략)"
+                    # 최대 8개, 조항당 300자로 잘라서 토큰 절약
+                    relevant = relevant[:8]
+                    ctx_parts = []
+                    for a in relevant:
+                        body = a["content"][:300].strip()
+                        ctx_parts.append(f"[{a['doc']}] {a['title']}\n{body}")
+                    ctx = "\n\n".join(ctx_parts)
 
                     full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
 아래 [관련 조항]을 바탕으로 [질문]에 간결하고 정확하게 답변해줘.
