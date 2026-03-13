@@ -12,6 +12,135 @@ import streamlit as st
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
+# ── 글로벌 CSS ──
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+
+/* 전체 배경 */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(160deg, #0a0e1a 0%, #0f1624 50%, #0d1420 100%);
+}
+[data-testid="stHeader"] { background: transparent; }
+
+/* 사이드바 없애고 메인 영역 */
+.main .block-container {
+    max-width: 900px;
+    padding: 2rem 2rem 4rem;
+}
+
+/* 구분선 */
+hr { border-color: rgba(196,160,80,0.2) !important; }
+
+/* multiselect */
+[data-testid="stMultiSelect"] label {
+    color: #a0a8c0 !important;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+[data-testid="stMultiSelect"] [data-baseweb="select"] {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(196,160,80,0.3) !important;
+    border-radius: 8px !important;
+}
+[data-baseweb="tag"] {
+    background: linear-gradient(135deg, #c4a050, #e8c878) !important;
+    color: #0a0e1a !important;
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+}
+
+/* 탭 */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    background: transparent;
+    border-bottom: 1px solid rgba(196,160,80,0.2);
+    gap: 0;
+}
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    color: #6070a0 !important;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    padding: 0.6rem 1.4rem;
+    background: transparent !important;
+    border: none !important;
+}
+[data-testid="stTabs"] [aria-selected="true"] {
+    color: #c4a050 !important;
+    border-bottom: 2px solid #c4a050 !important;
+}
+
+/* 키워드 입력창 */
+[data-testid="stTextInput"] input {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(196,160,80,0.25) !important;
+    border-radius: 8px !important;
+    color: #e8eaf0 !important;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+[data-testid="stTextInput"] input:focus {
+    border-color: rgba(196,160,80,0.6) !important;
+    box-shadow: 0 0 0 2px rgba(196,160,80,0.1) !important;
+}
+
+/* 채팅 입력창 */
+[data-testid="stChatInput"] textarea {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(196,160,80,0.25) !important;
+    border-radius: 10px !important;
+    color: #e8eaf0 !important;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+[data-testid="stChatInput"] textarea:focus {
+    border-color: rgba(196,160,80,0.5) !important;
+}
+[data-testid="stChatInput"] button {
+    background: linear-gradient(135deg, #c4a050, #e8c878) !important;
+    border-radius: 8px !important;
+}
+
+/* 채팅 메시지 */
+[data-testid="stChatMessage"] {
+    background: rgba(255,255,255,0.02) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 12px !important;
+    margin-bottom: 0.5rem;
+}
+
+/* spinner */
+[data-testid="stSpinner"] { color: #c4a050 !important; }
+
+/* success/warning/error */
+[data-testid="stAlert"] {
+    border-radius: 8px !important;
+    border: 1px solid rgba(196,160,80,0.2) !important;
+    background: rgba(196,160,80,0.05) !important;
+}
+
+/* expander */
+[data-testid="stExpander"] {
+    border: 1px solid rgba(196,160,80,0.2) !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,0.01) !important;
+}
+[data-testid="stExpander"] summary {
+    color: #c4a050 !important;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+}
+
+/* toggle */
+[data-testid="stToggle"] label { color: #a0a8c0 !important; }
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(196,160,80,0.3); border-radius: 2px; }
+</style>
+""", unsafe_allow_html=True)
+
 # 헤더
 try:
     with open("logo.png", "rb") as f:
@@ -25,12 +154,21 @@ except Exception:
     logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
 
 st.markdown(
-    f"""<div style='display:flex;align-items:flex-start;margin-bottom:4px'>
-    {logo_html}
-    <div style='line-height:1.2'>
-      <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
-      <div style='font-size:0.78rem;color:#999;margin-top:2px'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</div>
-    </div></div>""",
+    f"""
+<div style='display:flex;align-items:center;padding:1.2rem 0 1rem;
+            border-bottom:1px solid rgba(196,160,80,0.2);margin-bottom:1.5rem'>
+  {logo_html}
+  <div>
+    <div style='font-family:"Noto Serif KR",serif;font-size:1.3rem;font-weight:700;
+                color:#e8d5a0;letter-spacing:0.02em;line-height:1.2'>
+      롯데캐슬스카이엘 규약 통합 검색
+    </div>
+    <div style='font-family:"Noto Sans KR",sans-serif;font-size:0.75rem;
+                color:rgba(196,160,80,0.6);margin-top:3px;letter-spacing:0.08em'>
+      관리규약 &nbsp;·&nbsp; 주차규약 &nbsp;·&nbsp; 커뮤니티센터 규약
+    </div>
+  </div>
+</div>""",
     unsafe_allow_html=True,
 )
 
@@ -273,9 +411,9 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
 # 7. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
-    "관리규약":         "#1a6ebd",
-    "주차규약":         "#2e8b57",
-    "커뮤니티센터 규약": "#8b4513",
+    "관리규약":         "#2a5298",
+    "주차규약":         "#1a6e4a",
+    "커뮤니티센터 규약": "#7a4a1a",
 }
 
 def render_article_card(art: dict, keyword: str = "") -> None:
@@ -286,16 +424,22 @@ def render_article_card(art: dict, keyword: str = "") -> None:
             r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
             content,
         )
-    bc = DOC_COLORS.get(art["doc"], "#555")
+    bc = DOC_COLORS.get(art["doc"], "#4a5568")
     st.html(f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
-            margin-bottom:12px;background:#fafafa;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
-  <div style='margin-bottom:8px'>
-    <span style='background:{bc};color:white;padding:2px 8px;
-                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
-    &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{art["title"]}</span>
+<div style='border:1px solid rgba(196,160,80,0.15);border-radius:12px;padding:18px 22px;
+            margin-bottom:12px;
+            background:linear-gradient(135deg,rgba(196,160,80,0.04) 0%,rgba(255,255,255,0.02) 100%);
+            box-shadow:0 2px 12px rgba(0,0,0,0.3)'>
+  <div style='display:flex;align-items:center;margin-bottom:10px;gap:8px'>
+    <span style='background:{bc};color:white;padding:3px 10px;
+                 border-radius:4px;font-size:0.72rem;font-weight:600;
+                 letter-spacing:0.05em;font-family:Noto Sans KR,sans-serif'>{art["doc"]}</span>
+    <span style='font-size:0.95rem;font-weight:700;color:#e8d5a0;
+                 font-family:Noto Serif KR,serif'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.88rem;color:#333;line-height:1.8'>{content.replace(chr(10), '<br>')}</div>
+  <div style='font-size:0.85rem;color:#b0bcd8;line-height:1.9;
+              font-family:Noto Sans KR,sans-serif;
+              border-top:1px solid rgba(196,160,80,0.1);padding-top:10px'>{content.replace(chr(10), '<br>')}</div>
 </div>""")
 
 # ─────────────────────────────────────────
