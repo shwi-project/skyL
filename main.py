@@ -1,43 +1,38 @@
-import streamlit as st
-import requests
+import base64
 import os
 import re
+import time
+
+import requests
+import streamlit as st
 from pypdf import PdfReader
 
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-import base64 as _b64
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
 
-# 헤더: 로고 + 타이틀 (HTML로 한 줄 배치, 클릭 불가)
+# 헤더: 로고 + 타이틀 (HTML 인라인, 클릭 불가)
 try:
-    with open("logo.png", "rb") as _f:
-        _logo_b64 = _b64.b64encode(_f.read()).decode()
-    _logo_html = f"<img src='data:image/png;base64,{_logo_b64}' style='width:36px;height:36px;object-fit:contain;vertical-align:middle;margin-right:10px;pointer-events:none;'>"
+    with open("logo.png", "rb") as f:
+        logo_b64 = base64.b64encode(f.read()).decode()
+    logo_html = (
+        f"<img src='data:image/png;base64,{logo_b64}' "
+        "style='width:36px;height:36px;object-fit:contain;"
+        "vertical-align:middle;margin-right:10px;pointer-events:none;'>"
+    )
 except Exception:
-    _logo_html = "<span style='font-size:1.4rem;vertical-align:middle;margin-right:8px'>🏰</span>"
+    logo_html = "<span style='font-size:1.4rem;vertical-align:middle;margin-right:8px'>🏰</span>"
 
 st.markdown(
     f"""<div style='display:flex;align-items:center;margin-bottom:4px'>
-    {_logo_html}
+    {logo_html}
     <div>
       <span style='font-size:1.1rem;font-weight:700;line-height:1.3'>롯데캐슬스카이엘 규약 통합 검색</span><br>
       <span style='font-size:0.8rem;color:#888'>관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.</span>
-    </div>
-    </div>""",
-    unsafe_allow_html=True
+    </div></div>""",
+    unsafe_allow_html=True,
 )
-
-with st.expander("🔧 사용 가능한 모델 목록 확인"):
-    if st.button("모델 조회"):
-        try:
-            import google.generativeai as _g
-            _g.configure(api_key=st.secrets.get("GOOGLE_API_KEY",""))
-            names = sorted([m.name for m in _g.list_models() if "generateContent" in m.supported_generation_methods])
-            st.write(names)
-        except Exception as e:
-            st.error(e)
 
 # ─────────────────────────────────────────
 # 1. API 키 설정
@@ -51,124 +46,90 @@ except Exception:
     api_ready = False
 
 # ─────────────────────────────────────────
-# 2. PDF별 텍스트 정제 함수
+# 2. PDF 텍스트 정제 함수
 # ─────────────────────────────────────────
 
 def is_toc_page(text: str) -> bool:
-    """목차 페이지 여부 판단 — · 문자가 많거나 줄점(……) 패턴이 많으면 목차."""
-    dot_count = text.count('·') + text.count('…') + text.count('‥')
-    return dot_count > 8
+    return text.count("·") + text.count("…") + text.count("‥") > 8
+
 
 def clean_management(text: str) -> str:
-    """관리규약 PDF 전용 정제.
-    PDF 특성: '제 조 {제목}{번호} 【 】' 형태로 추출됨 → '제{번호}조 {제목}' 으로 정규화.
-    """
-    if is_toc_page(text):
-        return ""
-    # "제 조 {제목}{번호} 【 】" → "\n\n제{번호}조 {제목}"
+    text = re.sub(r"-\s*\d+\s*-", "", text)
     text = re.sub(
-        r'제\s*\n?조\s+([가-힣a-zA-Z0-9\s·,\.]*?)(\d+)\s*(?:【\s*】\s*)?',
-        lambda m: f'\n\n제{m.group(2).strip()}조 {m.group(1).strip()} ',
-        text
+        r"제\s*\n?조\s+([가-힣a-zA-Z0-9\s·,\.]*?)(\d+)\s*(?:【\s*】\s*)?",
+        lambda m: f"\n\n제{m.group(2).strip()}조 {m.group(1).strip()} ",
+        text,
     )
-    # 페이지 번호 제거 '- N -'
-    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
-    # 남은 【 】 괄호 제거
-    text = re.sub(r'【[^】]*】', '', text)
-    # ①②③ 등 항번호 앞에 줄바꿈 (단독 줄로 분리)
-    text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
-    # 항번호 뒤 모든 공백/줄바꿈 → 단일 공백으로 (①\n\n함한다 → ① 함한다)
-    text = re.sub(r'([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])[\s\n]+', r'\1 ', text)
-    # 문장 중간에 끊긴 줄바꿈 합치기
-    # 줄 끝이 조사/어미로 끝나지 않고 다음 줄이 소문자/한글로 이어지면 합치기
-    text = re.sub(r'([가-힣a-zA-Z0-9,])\n([가-힣a-zA-Z0-9\(])', r'\1 \2', text)
-    # 과도한 공백 정리
-    text = re.sub(r'[ \t]{3,}', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"【[^】]*】", "", text)
+    text = re.sub(r"(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])", r"\n\1", text)
+    text = re.sub(r"([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])[\s\n]+", r"\1 ", text)
+    text = re.sub(r"([가-힣a-zA-Z0-9,])\n([가-힣a-zA-Z0-9\(])", r"\1 \2", text)
+    text = re.sub(r"[ \t]{3,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
 
 def clean_parking(text: str) -> str:
-    """주차규약 PDF 전용 정제: 붙어있는 조항 분리."""
-    if is_toc_page(text):
-        return ""
-    # '제N조 (제목)' 앞에 줄바꿈 삽입
-    text = re.sub(r'(?<!\n)(제\d+조)', r'\n\n\1', text)
-    # 장(章) 앞에도 줄바꿈
-    text = re.sub(r'(?<!\n)(제\d+장)', r'\n\n\1', text)
-    # ①②③ 등 항번호 앞에 줄바꿈
-    text = re.sub(r'(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩])', r'\n\1', text)
-    # 숫자 목록 '1. ' '2. ' 앞에 줄바꿈
-    text = re.sub(r'(?<!\n)(\d+\. )', r'\n\1', text)
-    text = re.sub(r'[ \t]{2,}', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"(?<!\n)(제\d+조)", r"\n\n\1", text)
+    text = re.sub(r"(?<!\n)(제\d+장)", r"\n\n\1", text)
+    text = re.sub(r"(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩])", r"\n\1", text)
+    text = re.sub(r"(?<!\n)(\d+\. )", r"\n\1", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
+
 def clean_community(text: str) -> str:
-    """커뮤니티센터 규약 PDF 전용 정제."""
-    if is_toc_page(text):
-        return ""
-    text = re.sub(r'-\s*\d+\s*-\n?', '', text)
-    # 제N조 앞에 줄바꿈
-    text = re.sub(r'(?<!\n)(제\d+조)', r'\n\n\1', text)
-    text = re.sub(r'(?<!\n)(제\d+장)', r'\n\n\1', text)
-    text = re.sub(r'(?<!\n)([⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])', r'\n\1', text)
-    text = re.sub(r'[ \t]{2,}', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r"-\s*\d+\s*-", "", text)
+    text = re.sub(r"(?<!\n)(제\d+조)", r"\n\n\1", text)
+    text = re.sub(r"(?<!\n)(제\d+장)", r"\n\n\1", text)
+    text = re.sub(r"(?<!\n)([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])", r"\n\1", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
 
 # ─────────────────────────────────────────
 # 3. PDF 로드
 # ─────────────────────────────────────────
 PDF_FILES = {
-    "관리규약":         ("rules_management.pdf",  clean_management),
-    "주차규약":         ("rules_parking.pdf",      clean_parking),
-    "커뮤니티센터 규약": ("rules_community.pdf",    clean_community),
+    "관리규약":          ("rules_management.pdf",  "management"),
+    "주차규약":          ("rules_parking.pdf",      "parking"),
+    "커뮤니티센터 규약":  ("rules_community.pdf",    "community"),
+}
+CLEANER_MAP = {
+    "management": clean_management,
+    "parking":    clean_parking,
+    "community":  clean_community,
 }
 
-@st.cache_data(show_spinner=False)
-def load_pdf_text(pdf_path: str, cleaner_name: str, _version: int = 6) -> str:
-    """PDF에서 텍스트 추출 후 정제. _version 변경 시 캐시 무효화."""
-    cleaner_map = {
-        "management": clean_management,
-        "parking":    clean_parking,
-        "community":  clean_community,
-    }
-    cleaner = cleaner_map[cleaner_name]
 
+@st.cache_data(show_spinner=False)
+def load_pdf_text(pdf_path: str, cleaner_key: str, _v: int = 1) -> str:
     if not os.path.exists(pdf_path):
         return ""
+    cleaner = CLEANER_MAP[cleaner_key]
     pages = []
     try:
-        reader = PdfReader(pdf_path)
-        for page in reader.pages:
+        for page in PdfReader(pdf_path).pages:
             raw = page.extract_text() or ""
-            # 목차 페이지만 먼저 걸러내고 raw 텍스트 수집
             if not is_toc_page(raw):
                 pages.append(raw)
     except Exception as e:
-        st.error(f"PDF 읽기 오류 ({pdf_path}): {e}")
-    # 전체 합친 후 정제 (페이지 경계 줄바꿈 문제 해결)
-    full_raw = "\n".join(pages)
-    return cleaner(full_raw)
+        st.error(f"PDF 읽기 오류: {e}")
+    return cleaner("\n".join(pages))
 
-CLEANER_KEYS = {
-    "관리규약":         "management",
-    "주차규약":         "parking",
-    "커뮤니티센터 규약": "community",
-}
 
 pdf_texts: dict[str, str] = {}
-for name, (path, _) in PDF_FILES.items():
-    t = load_pdf_text(path, CLEANER_KEYS[name])
+for name, (path, key) in PDF_FILES.items():
+    t = load_pdf_text(path, key)
     if t:
         pdf_texts[name] = t
 
 if not pdf_texts:
     st.error(
-        "📂 GitHub 저장소 최상위 경로에 다음 PDF 파일을 업로드해주세요:\n\n"
-        "- `rules_management.pdf` (관리규약)\n"
-        "- `rules_parking.pdf` (주차규약)\n"
-        "- `rules_community.pdf` (커뮤니티센터 규약)"
+        "📂 GitHub 저장소 최상위 경로에 PDF 파일을 업로드해주세요:\n\n"
+        "- `rules_management.pdf`\n- `rules_parking.pdf`\n- `rules_community.pdf`"
     )
     st.stop()
 
@@ -191,88 +152,105 @@ if not selected:
 combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 
 # ─────────────────────────────────────────
-# 5. AI 모델 초기화
+# 5. Gemini AI 호출
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 직접 호출 — 429 시 최대 3회 재시도."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model = "gemini-2.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key,
-    }
+    model   = "gemini-2.5-flash"
+    url     = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": 8192},
     }
-    import time
+    last_err = ""
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=120)
         if resp.status_code == 429:
             last_err = resp.text
-            wait = (attempt + 1) * 15
-            time.sleep(wait)
+            time.sleep((attempt + 1) * 15)
             continue
         if not resp.ok:
             raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
-        data = resp.json()
-        candidate = data["candidates"][0]
-        text = candidate["content"]["parts"][0]["text"]
-        finish = candidate.get("finishReason", "")
-
-        # 토큰 한도로 잘렸으면 이어쓰기 요청
-        if finish == "MAX_TOKENS":
-            cont_payload = {
+        candidate = resp.json()["candidates"][0]
+        text      = candidate["content"]["parts"][0]["text"]
+        if candidate.get("finishReason") == "MAX_TOKENS":
+            cont = requests.post(url, headers=headers, json={
                 "contents": [
                     {"role": "user",  "parts": [{"text": prompt}]},
                     {"role": "model", "parts": [{"text": text}]},
                     {"role": "user",  "parts": [{"text": "이어서 계속 작성해줘."}]},
                 ],
                 "generationConfig": {"maxOutputTokens": 8192},
-            }
-            cont_resp = requests.post(url, headers=headers, json=cont_payload, timeout=120)
-            if cont_resp.ok:
-                cont_data = cont_resp.json()
-                text += cont_data["candidates"][0]["content"]["parts"][0]["text"]
+            }, timeout=120)
+            if cont.ok:
+                text += cont.json()["candidates"][0]["content"]["parts"][0]["text"]
         return text
-    raise RuntimeError(f"429 한도 초과 — 전체 에러: {last_err}")
+    raise RuntimeError(f"429 한도 초과: {last_err}")
+
 
 # ─────────────────────────────────────────
-# 6. 조/항 단위 파싱
+# 6. 조항 파싱
 # ─────────────────────────────────────────
-ARTICLE_PATTERN = re.compile(
+ARTICLE_RE = re.compile(
     r"(제\s*\d+\s*조(?:의\s*\d+)?[^\n]*\n[\s\S]*?)(?=\n제\s*\d+\s*조(?:의\s*\d+)?|\Z)"
 )
 
+
 def parse_articles(doc_name: str, text: str) -> list[dict]:
-    """조(條) 단위로 텍스트를 파싱. 목차성 블록은 제외."""
     articles = []
-    for m in ARTICLE_PATTERN.finditer(text):
+    for m in ARTICLE_RE.finditer(text):
         block = m.group(0).strip()
-        if not block:
-            continue
         lines = [l for l in block.splitlines() if l.strip()]
-        # 목차 필터: 줄 수가 2줄 이하 OR 실제 내용이 없는 블록
         if len(lines) <= 2:
             continue
-        # 목차 필터: 내용 줄이 모두 매우 짧고 점선 패턴
-        body_lines = lines[1:]
-        if body_lines and sum(1 for l in body_lines if len(l.strip()) < 20) / len(body_lines) > 0.7:
-            continue
         title = lines[0].strip()
-        # 첨부자료 등으로 인해 비정상적으로 긴 블록은 1500자로 제한
         if len(block) > 1500:
             block = block[:1500].strip() + "...(이하 생략)"
         articles.append({"doc": doc_name, "title": title, "content": block})
     return articles
 
+
 @st.cache_data(show_spinner=False)
-def get_all_articles(doc_name: str, text: str, _version: int = 6) -> list[dict]:
+def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
     return parse_articles(doc_name, text)
 
+
 # ─────────────────────────────────────────
-# 7. 탭 구성
+# 7. 공통 UI — 조항 카드
+# ─────────────────────────────────────────
+DOC_COLORS = {
+    "관리규약":          "#1a6ebd",
+    "주차규약":          "#2e8b57",
+    "커뮤니티센터 규약":  "#8b4513",
+}
+
+
+def render_article_card(art: dict, keyword: str = "") -> None:
+    content = art["content"]
+    if keyword:
+        content = re.sub(
+            f"(?i)({re.escape(keyword)})",
+            r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
+            content,
+        )
+    bc = DOC_COLORS.get(art["doc"], "#555")
+    st.html(f"""
+<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
+            margin-bottom:12px;background:#fafafa;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
+  <div style='margin-bottom:6px'>
+    <span style='background:{bc};color:white;padding:2px 8px;
+                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
+    &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{art["title"]}</span>
+  </div>
+  <div style='font-size:0.88rem;color:#333;line-height:1.8;margin-top:8px'>
+    {content.replace(chr(10), "<br>")}
+  </div>
+</div>""")
+
+
+# ─────────────────────────────────────────
+# 8. 탭 구성
 # ─────────────────────────────────────────
 tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "🤖 AI 질문 검색"])
 
@@ -284,26 +262,19 @@ with tab_keyword:
     with col1:
         keyword = st.text_input(
             "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
-            label_visibility="collapsed",
-            key="keyword_input",
+            label_visibility="collapsed", key="keyword_input",
         )
     with col2:
-        use_ai_summary = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready, key="ai_summary_toggle")
+        use_ai = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
 
     if keyword:
-        keyword_lower = keyword.lower()
+        kw = keyword.lower()
         matched: list[dict] = []
-
         for doc_name in selected:
-            articles = get_all_articles(doc_name, pdf_texts[doc_name])
-            if articles:
-                # 제목에 키워드 있는 것 우선, 본문만 있는 것 후순위
-                title_match = [a for a in articles if keyword_lower in a["title"].lower()]
-                body_match  = [a for a in articles if keyword_lower in a["content"].lower()
-                               and keyword_lower not in a["title"].lower()]
-                matched.extend(title_match + body_match)
-
-        # 최대 10개로 제한
+            arts = get_articles(doc_name, pdf_texts[doc_name])
+            title_hits = [a for a in arts if kw in a["title"].lower()]
+            body_hits  = [a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower()]
+            matched.extend(title_hits + body_hits)
         matched = matched[:10]
 
         if not matched:
@@ -311,74 +282,32 @@ with tab_keyword:
         else:
             st.success(f"총 **{len(matched)}개** 조항 발견")
 
-            # AI 요약 — 같은 키워드면 캐시된 결과 사용 (탭 전환 시 재호출 방지)
-            if use_ai_summary and api_ready:
+            # AI 요약 (같은 키워드면 캐시 재사용)
+            if use_ai and api_ready:
                 cache_key = f"summary_{keyword}"
                 if cache_key not in st.session_state:
-                    docs_in_results = list({a["doc"] for a in matched})
-                    full_ctx = "\n\n".join(
-                        f"=== [{n}] ===\n{pdf_texts[n]}"
-                        for n in docs_in_results if n in pdf_texts
+                    docs = list({a["doc"] for a in matched})
+                    ctx  = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in docs if n in pdf_texts)
+                    ai_prompt = (
+                        f"아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.\n"
+                        f"구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,\n"
+                        f"관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.\n"
+                        f"서론 없이 바로 내용부터 시작해줘.\n\n[규약 전문]\n{ctx}"
                     )
-                    ai_prompt = f"""아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.
-구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,
-관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.
-서론 없이 바로 내용부터 시작해줘.
-
-[규약 전문]
-{full_ctx}"""
                     with st.spinner("AI가 요약하는 중..."):
                         try:
-                            result = ai_generate(ai_prompt)
-                            st.session_state[cache_key] = result
+                            st.session_state[cache_key] = ai_generate(ai_prompt)
                         except Exception as e:
                             st.warning(f"AI 요약 실패: {e}")
                             st.session_state[cache_key] = None
 
-                cached = st.session_state.get(cache_key)
-                if cached:
+                if st.session_state.get(cache_key):
                     st.markdown("##### 🤖 AI 요약")
-                    st.markdown(cached)
+                    st.markdown(st.session_state[cache_key])
 
             st.divider()
-
-            # 조항별 카드 표시
-            DOC_COLORS = {
-                "관리규약":         "#1a6ebd",
-                "주차규약":         "#2e8b57",
-                "커뮤니티센터 규약": "#8b4513",
-            }
             for art in matched:
-                highlighted = re.sub(
-                    f"(?i)({re.escape(keyword)})",
-                    r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
-                    art["content"],
-                )
-                badge_color = DOC_COLORS.get(art["doc"], "#555")
-                badge = (
-                    f"<span style='background:{badge_color};color:white;"
-                    f"padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600'>"
-                    f"{art['doc']}</span>"
-                )
-                title_html = (
-                    f"<span style='font-size:1rem;font-weight:700;color:#222'>"
-                    f"{art['title']}</span>"
-                )
-                # \n을 <br>로 변환해서 HTML 카드에서 줄바꿈 표시
-                highlighted_html = highlighted.replace("\n", "<br>")
-                body_html = (
-                    "<div style='font-size:0.88rem;color:#333;line-height:1.7;"
-                    "margin-top:8px'>"
-                    + highlighted_html + "</div>"
-                )
-                card_html = f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
-            margin-bottom:12px;background:#fafafa;
-            box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
-  <div style='margin-bottom:6px'>{badge}&nbsp;&nbsp;{title_html}</div>
-  {body_html}
-</div>"""
-                st.html(card_html)
+                render_article_card(art, keyword)
 
 # ══════════════════════════════════════════
 # TAB B — AI 질문 검색
@@ -396,23 +325,8 @@ with tab_ai:
             st.markdown(msg["content"])
             if msg.get("articles"):
                 with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                    DOC_COLORS3 = {
-                        "관리규약": "#1a6ebd",
-                        "주차규약": "#2e8b57",
-                        "커뮤니티센터 규약": "#8b4513",
-                    }
                     for art in msg["articles"]:
-                        bc = DOC_COLORS3.get(art["doc"], "#555")
-                        st.html(f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:14px 18px;
-            margin-bottom:10px;background:#fafafa'>
-  <div style='margin-bottom:6px'>
-    <span style='background:{bc};color:white;padding:2px 8px;
-                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
-    &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
-  </div>
-  <div style='font-size:0.85rem;color:#444;line-height:1.7'>{art["content"].replace(chr(10), "<br>")}</div>
-</div>""")
+                        render_article_card(art)
 
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -420,109 +334,75 @@ with tab_ai:
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            with st.spinner("관련 조항을 검색 중입니다..."):
+            with st.spinner("AI가 답변을 생성하는 중..."):
                 try:
-                    # ── 질문에서 키워드 추출 후 관련 조항만 필터링 ──
-                    # 조사/어미 제거 후 2글자 이상 단어만 추출
-                    q_words = [w for w in re.split(r"[\s,?!.]+", prompt) if len(w) >= 2]
+                    full_prompt = (
+                        "너는 아파트 규약 전문 AI 비서야.\n"
+                        "아래 규약 전문을 읽고 질문에 답변해줘.\n\n"
+                        "규칙:\n"
+                        "- 형식 레이블(\"핵심 답변:\", \"근거:\" 등) 없이 자연스럽게 답변해줘\n"
+                        "- 답변 마지막에 근거 조항을 한 줄로 명시해줘 (예: 📌 관리규약 제16조)\n"
+                        "- 질문과 직접 관련된 규약의 조항만 근거로 써줘. 관련 없는 규약은 언급하지 마\n"
+                        "- 규약에 없는 내용은 \"해당 규약에서 찾을 수 없습니다\"라고만 답해줘\n\n"
+                        f"[규약 전문]\n{combined_text}\n\n[질문]\n{prompt}"
+                    )
+                    response_text = ai_generate(full_prompt)
+                    st.markdown(response_text)
 
+                    # 근거 조항 원문 매칭
                     all_arts = []
                     for dn in selected:
-                        all_arts += get_all_articles(dn, pdf_texts[dn])
+                        all_arts += get_articles(dn, pdf_texts[dn])
 
-                    full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
-아래 규약 전문을 읽고 질문에 답변해줘.
+                    ALIAS_MAP = {
+                        "관리규약":        "관리규약",
+                        "주차규약":        "주차규약",
+                        "주차관리":        "주차규약",
+                        "커뮤니티센터 규약": "커뮤니티센터 규약",
+                        "커뮤니티규약":    "커뮤니티센터 규약",
+                    }
 
-규칙:
-- 서론/형식 레이블("핵심 답변:", "근거:" 등) 없이 자연스럽게 답변해줘
-- 답변 마지막에 근거 조항을 한 줄로 명시해줘 (예: 📌 관리규약 제16조)
-- 질문과 직접 관련된 규약의 조항만 근거로 써줘. 관련 없는 규약은 언급하지 마
-- 규약에 없는 내용은 "해당 규약에서 찾을 수 없습니다"라고만 답해줘
+                    def extract_pairs(txt: str) -> list:
+                        result  = []
+                        clean   = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", txt)
+                        doc_pat = re.compile(r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)")
+                        for dm in doc_pat.finditer(clean):
+                            doc_name = ALIAS_MAP.get(dm.group(0).strip(), dm.group(0).strip())
+                            after    = clean[dm.end():]
+                            nxt      = doc_pat.search(after)
+                            scope    = after[:nxt.start()] if nxt else after
+                            for am in re.finditer(r"제\s*(\d+)\s*조", scope):
+                                result.append((doc_name, am.group(1)))
+                        return list(dict.fromkeys(result))
 
-[규약 전문]
-{combined_text}
+                    related   = []
+                    seen_keys = set()
+                    for doc_name, num in extract_pairs(response_text):
+                        key = (doc_name, num)
+                        if key in seen_keys:
+                            continue
+                        seen_keys.add(key)
+                        pat = re.compile(rf"제\s*{num}\s*조")
+                        for art in all_arts:
+                            if art["doc"] == doc_name and pat.search(art["title"]):
+                                related.append(art)
+                                break
 
-[질문]
-{prompt}"""
+                    if related:
+                        with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                            for art in related:
+                                render_article_card(art)
 
-                    response_text = ai_generate(full_prompt)
-
-                    if response_text:
-                        st.markdown(response_text)
-
-                        # 답변에서 "규약명 + 조항번호" 쌍으로 추출 → 정확한 매칭
-                        all_arts = []
-                        for doc_name in selected:
-                            all_arts += get_all_articles(doc_name, pdf_texts[doc_name])
-
-                        ALIAS_MAP = {
-                            "관리규약": "관리규약",
-                            "주차규약": "주차규약",
-                            "주차관리": "주차규약",
-                            "커뮤니티센터 규약": "커뮤니티센터 규약",
-                            "커뮤니티규약": "커뮤니티센터 규약",
-                        }
-
-                        def extract_pairs(text):
-                            """규약명 이후 연속된 제N조를 같은 규약으로 묶어 추출.
-                            제N항·제N호 숫자는 조번호로 취급하지 않음."""
-                            result = []
-                            clean = re.sub(r"[^\w\s가-힣\(\)\.\,]", " ", text)
-                            doc_pat = re.compile(r"(관리규약|주차규약|주차관리|커뮤니티센터?\s*규약)")
-                            for dm in doc_pat.finditer(clean):
-                                doc_name = ALIAS_MAP.get(dm.group(0).strip(), dm.group(0).strip())
-                                after = clean[dm.end():]
-                                next_doc = doc_pat.search(after)
-                                scope = after[:next_doc.start()] if next_doc else after
-                                for am in re.finditer(r"제\s*(\d+)\s*조", scope):
-                                    result.append((doc_name, am.group(1)))
-                            return list(dict.fromkeys(result))  # 중복 제거, 순서 유지
-
-                        related = []
-                        seen_keys = set()
-                        for doc_name, num in extract_pairs(response_text):
-                            key = (doc_name, num)
-                            if key in seen_keys:
-                                continue
-                            seen_keys.add(key)
-                            pat = re.compile(rf"제\s*{num}\s*조")
-                            for art in all_arts:
-                                if art["doc"] == doc_name and pat.search(art["title"]):
-                                    related.append(art)
-                                    break
-
-                        if related:
-                            with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                                DOC_COLORS2 = {
-                                    "관리규약": "#1a6ebd",
-                                    "주차규약": "#2e8b57",
-                                    "커뮤니티센터 규약": "#8b4513",
-                                }
-                                for art in related:
-                                    bc = DOC_COLORS2.get(art["doc"], "#555")
-                                    st.html(f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:14px 18px;
-            margin-bottom:10px;background:#fafafa'>
-  <div style='margin-bottom:6px'>
-    <span style='background:{bc};color:white;padding:2px 8px;
-                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
-    &nbsp;<span style='font-weight:700;font-size:0.95rem'>{art["title"]}</span>
-  </div>
-  <div style='font-size:0.85rem;color:#444;line-height:1.7'>{art["content"].replace(chr(10), "<br>")}</div>
-</div>""")
-
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": response_text,
-                            "articles": related,
-                        })
-                    else:
-                        st.error("답변을 생성하지 못했습니다.")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response_text,
+                        "articles": related,
+                    })
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
 
-    if st.session_state.messages:
+    if st.session_state.get("messages"):
         if st.button("🗑️ 대화 초기화"):
             st.session_state.messages = []
             st.rerun()
