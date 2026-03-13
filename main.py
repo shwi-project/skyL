@@ -163,21 +163,30 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 직접 호출."""
+    """Gemini REST API 직접 호출 — 429 시 최대 3회 재시도."""
+    import time
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    # list_models()가 'models/gemini-X' 형식으로 반환하므로 models/ 제거 후 사용
-    model = "gemini-2.5-flash"
+    model = "gemini-1.5-flash"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": api_key,
     }
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
-    if not resp.ok:
-        raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text[:200]}")
-    data = resp.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"]
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 512},
+    }
+    for attempt in range(3):
+        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        if resp.status_code == 429:
+            wait = (attempt + 1) * 10
+            time.sleep(wait)
+            continue
+        if not resp.ok:
+            raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text[:500]}")
+        data = resp.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    raise RuntimeError(f"429 한도 초과 — 마지막 응답: {resp.text[:500]}")
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
@@ -225,7 +234,7 @@ with tab_keyword:
             label_visibility="collapsed",
         )
     with col2:
-        use_ai_summary = st.toggle("🤖 AI 요약", value=True, disabled=not api_ready)
+        use_ai_summary = st.toggle("🤖 AI 요약", value=False, disabled=not api_ready)
 
     if keyword:
         keyword_lower = keyword.lower()
