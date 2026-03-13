@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 import os
 import re
 from pypdf import PdfReader
@@ -8,7 +8,7 @@ from pypdf import PdfReader
 # 페이지 설정
 # ─────────────────────────────────────────
 st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🦅", layout="wide")
-st.title("🦅 롯데캐슬스카이엘 규약 통합 검색")
+st.title("🦅🏰 롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
 # ─────────────────────────────────────────
@@ -16,7 +16,8 @@ st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워�
 # ─────────────────────────────────────────
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=API_KEY)
+    genai_client = genai.Client(api_key=API_KEY)
+    st.session_state["genai_client"] = genai_client
     api_ready = True
 except Exception:
     st.warning("⚠️ Streamlit Cloud의 Settings > Secrets에 GOOGLE_API_KEY를 등록해주세요.")
@@ -162,9 +163,22 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
-def get_model():
-    """gemini-1.5-flash 고정 반환 — API 키는 호출 시점에 이미 설정됨."""
-    return genai.GenerativeModel("gemini-1.5-flash"), "gemini-1.5-flash"
+MODEL_NAME = "gemini-1.5-flash"
+
+def get_client():
+    """session_state에서 genai client 반환."""
+    return st.session_state.get("genai_client")
+
+def ai_generate(prompt: str) -> str:
+    """새 SDK로 텍스트 생성."""
+    client = get_client()
+    if client is None:
+        raise RuntimeError("API 클라이언트가 초기화되지 않았습니다.")
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=prompt,
+    )
+    return response.text
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
@@ -255,12 +269,11 @@ with tab_keyword:
                 )
                 with st.spinner("AI가 검색 결과를 요약하는 중..."):
                     try:
-                        model, model_name = get_model()
-                        resp = model.generate_content(prompt)
-                        if resp.text:
+                        result = ai_generate(prompt)
+                        if result:
                             with st.container(border=True):
                                 st.markdown("#### 🤖 AI 요약")
-                                st.markdown(resp.text)
+                                st.markdown(result)
                     except Exception as e:
                         st.warning(f"AI 요약 실패: {e}")
 
@@ -306,7 +319,6 @@ with tab_ai:
         with st.chat_message("assistant"):
             with st.spinner("규약 전문을 검토 중입니다..."):
                 try:
-                    model, model_name = get_model()
                     full_prompt = f"""너는 아파트 규약 전문 AI 비서야.
 아래 [규약 전문]을 꼼꼼히 읽고 [질문]에 대해 규약에 근거하여 정확하고 친절하게 답변해줘.
 
@@ -321,17 +333,17 @@ with tab_ai:
 [질문]
 {prompt}"""
 
-                    response = model.generate_content(full_prompt)
+                    response_text = ai_generate(full_prompt)
 
-                    if response.text:
-                        st.markdown(response.text)
+                    if response_text:
+                        st.markdown(response_text)
 
                         # 답변에서 언급된 조항 번호 추출 → 원문 첨부
                         all_arts = []
                         for doc_name in selected:
                             all_arts += get_all_articles(doc_name, pdf_texts[doc_name])
 
-                        mentioned = set(re.findall(r"제\s*(\d+)\s*조", response.text))
+                        mentioned = set(re.findall(r"제\s*(\d+)\s*조", response_text))
                         related = []
                         for num in mentioned:
                             pat = re.compile(rf"제\s*{num}\s*조")
@@ -348,7 +360,7 @@ with tab_ai:
 
                         st.session_state.messages.append({
                             "role": "assistant",
-                            "content": response.text,
+                            "content": response_text,
                             "articles": related,
                         })
                     else:
