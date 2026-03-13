@@ -177,7 +177,7 @@ def ai_generate(prompt: str) -> str:
     import time
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
     model = "gemini-2.0-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent"
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": api_key,
