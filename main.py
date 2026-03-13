@@ -189,14 +189,16 @@ def ai_generate(prompt: str) -> str:
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
         if resp.status_code == 429:
+            # 재시도 전에 전체 에러 내용 저장
+            last_err = resp.text
             wait = (attempt + 1) * 10
             time.sleep(wait)
             continue
         if not resp.ok:
-            raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text[:500]}")
+            raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
         data = resp.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
-    raise RuntimeError(f"429 한도 초과 — 마지막 응답: {resp.text[:500]}")
+    raise RuntimeError(f"429 한도 초과 — 전체 에러: {last_err}")
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
