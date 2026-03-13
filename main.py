@@ -162,23 +162,9 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
-@st.cache_resource
 def get_model():
-    """실제 호출해보며 사용 가능한 모델을 찾아 반환."""
-    candidates = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-    ]
-    last_err = None
-    for name in candidates:
-        try:
-            m = genai.GenerativeModel(name)
-            m.generate_content("test")
-            return m, name
-        except Exception as e:
-            last_err = e
-    raise RuntimeError(f"사용 가능한 Gemini 모델 없음: {last_err}")
+    """gemini-1.5-flash 고정 반환 — API 키는 호출 시점에 이미 설정됨."""
+    return genai.GenerativeModel("gemini-1.5-flash"), "gemini-1.5-flash"
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
