@@ -357,11 +357,11 @@ tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 with tab_keyword:
     col1, col2 = st.columns([4, 1])
     with col1:
-        _clear = st.session_state.pop("_keyword_clear", False)
+        if st.session_state.pop("_keyword_clear", False):
+            st.session_state["keyword_input"] = ""
         keyword = st.text_input(
             "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
             label_visibility="collapsed", key="keyword_input",
-            value="" if _clear else st.session_state.get("keyword_input", ""),
         )
     with col2:
         use_ai = st.toggle("AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
