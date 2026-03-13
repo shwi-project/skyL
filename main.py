@@ -162,19 +162,36 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
+# 신규 사용자에게 열려있는 모델 목록 (순서대로 시도)
+CANDIDATE_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+]
+
 def ai_generate(prompt: str) -> str:
-    """Gemini REST API 직접 호출 — API 키를 헤더로 전달."""
+    """Gemini REST API 직접 호출 — 여러 모델 순서대로 시도."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key,
-    }
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"]
+    last_err = None
+    for model in CANDIDATE_MODELS:
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={api_key}"
+        )
+        headers = {"Content-Type": "application/json"}
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=120)
+            if resp.status_code == 404:
+                last_err = f"{model}: 404 Not Found"
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            last_err = f"{model}: {e}"
+            continue
+    raise RuntimeError(f"모든 모델 시도 실패. 마지막 오류: {last_err}")
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
