@@ -11,6 +11,16 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 st.title("🦅🏰 롯데캐슬스카이엘 규약 통합 검색")
 st.caption("관리규약 · 주차규약 · 커뮤니티센터 규약을 키워드 및 AI로 검색합니다.")
 
+with st.expander("🔧 사용 가능한 모델 목록 확인"):
+    if st.button("모델 조회"):
+        try:
+            import google.generativeai as _g
+            _g.configure(api_key=st.secrets.get("GOOGLE_API_KEY",""))
+            names = sorted([m.name for m in _g.list_models() if "generateContent" in m.supported_generation_methods])
+            st.write(names)
+        except Exception as e:
+            st.error(e)
+
 # ─────────────────────────────────────────
 # 1. API 키 설정
 # ─────────────────────────────────────────
