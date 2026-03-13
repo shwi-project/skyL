@@ -341,7 +341,6 @@ with tab_ai:
         if k not in st.session_state:
             st.session_state[k] = None if k != "ai_articles" else []
 
-    # 새 질문 입력 시 → 초기화 + rerun
     if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
         st.session_state.ai_question = None
         st.session_state.ai_response = None
@@ -352,46 +351,53 @@ with tab_ai:
     pending = st.session_state["_ai_pending"]
 
     if pending:
-        # pending을 먼저 None으로 만들어서 재진입 방지
         st.session_state["_ai_pending"] = None
 
         with st.chat_message("user"):
             st.markdown(pending)
-        with st.chat_message("assistant"):
-            with st.spinner("AI가 답변을 생성하는 중..."):
-                try:
-                    response_text = ai_generate(
-                        f"[규약 전문]\n{combined_text}\n\n"
-                        f"[질문]\n{pending}\n\n"
-                        "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
-                        "1. 형식 레이블 없이 자연스럽게 답변\n"
-                        "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 근거 조항 명시 (필수):\n"
-                        "   📌 관리규약 제N조\n"
-                        "   또는 📌 주차규약 제N조\n"
-                        "   또는 📌 커뮤니티센터 규약 제N조\n"
-                        "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
-                        "4. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
-                        "근거 조항 없이 답변을 끝내지 마시오."
-                    )
-                    response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
-                    st.markdown(response_text)
 
-                    all_arts = []
-                    for dn in selected:
-                        all_arts += get_articles(dn, pdf_texts[dn])
-                    related = find_related_articles(response_text, all_arts)
+        # 스피너 없이 — placeholder로 로딩 텍스트 표시 후 교체
+        answer_placeholder = st.empty()
+        answer_placeholder.markdown("🤖 *AI가 답변을 생성하는 중...*")
 
-                    if related:
-                        with st.expander("📋 관련 조항 원문 보기", expanded=False):
-                            for art in related:
-                                render_article_card(art)
+        try:
+            response_text = ai_generate(
+                f"[규약 전문]\n{combined_text}\n\n"
+                f"[질문]\n{pending}\n\n"
+                "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
+                "1. 형식 레이블 없이 자연스럽게 답변\n"
+                "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 근거 조항 명시 (필수):\n"
+                "   📌 관리규약 제N조\n"
+                "   또는 📌 주차규약 제N조\n"
+                "   또는 📌 커뮤니티센터 규약 제N조\n"
+                "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
+                "4. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
+                "근거 조항 없이 답변을 끝내지 마시오."
+            )
+            response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
 
-                    st.session_state.ai_question = pending
-                    st.session_state.ai_response = response_text
-                    st.session_state.ai_articles = related
+            # 로딩 텍스트 지우고 실제 답변으로 교체
+            answer_placeholder.empty()
 
-                except Exception as e:
-                    st.error(f"❌ 오류 발생: {e}")
+            with st.chat_message("assistant"):
+                st.markdown(response_text)
+
+                all_arts = []
+                for dn in selected:
+                    all_arts += get_articles(dn, pdf_texts[dn])
+                related = find_related_articles(response_text, all_arts)
+
+                if related:
+                    with st.expander("📋 관련 조항 원문 보기", expanded=False):
+                        for art in related:
+                            render_article_card(art)
+
+            st.session_state.ai_question = pending
+            st.session_state.ai_response = response_text
+            st.session_state.ai_articles = related
+
+        except Exception as e:
+            answer_placeholder.error(f"❌ 오류 발생: {e}")
 
     elif st.session_state.ai_question:
         with st.chat_message("user"):
