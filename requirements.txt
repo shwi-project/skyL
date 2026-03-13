@@ -2,3 +2,4 @@ streamlit
 pypdf
 requests
 google-generativeai
+Pillow
