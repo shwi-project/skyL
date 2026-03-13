@@ -269,7 +269,7 @@ def render_article_card(art: dict, keyword: str = "") -> None:
                  border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
     &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{art["title"]}</span>
   </div>
-  <div style='font-size:0.88rem;color:#333;line-height:1.8;white-space:pre-wrap'>{content}</div>
+  <div style='font-size:0.88rem;color:#333;line-height:1.8'>{content.replace(chr(10), '<br>')}</div>
 </div>""")
 
 # ─────────────────────────────────────────
@@ -382,8 +382,11 @@ with tab_ai:
                         "   또는 📌 커뮤니티센터 규약 제N조\n"
                         "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
                         "4. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
+                        "- 📌 근거 조항은 반드시 답변 마지막에 빈 줄 하나 띄운 뒤 새 줄에 써줘\n"
                         "근거 조항 없이 답변을 끝내지 마시오."
                     )
+                    # 📌 앞에 빈 줄 강제 (마크다운 줄바꿈 보장)
+                    response_text = re.sub(r"([^\n])\n?(📌)", r"\1\n\n\2", response_text)
                     st.markdown(response_text)
 
                     all_arts = []
