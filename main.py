@@ -173,39 +173,22 @@ combined_text = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in selected)
 # ─────────────────────────────────────────
 # 5. AI 모델 초기화
 # ─────────────────────────────────────────
-# 2025년 3월 기준 AI Studio 신규 사용자에게 열려있는 모델 (순서대로 시도)
-CANDIDATE_MODELS = [
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-3-flash-preview",
-]
-
 def ai_generate(prompt: str) -> str:
     """Gemini REST API 직접 호출."""
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    base_url = "https://generativelanguage.googleapis.com/v1beta/models"
+    # list_models()가 'models/gemini-X' 형식으로 반환하므로 models/ 제거 후 사용
+    model = "gemini-2.5-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": api_key,
     }
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    last_err = None
-    for model in CANDIDATE_MODELS:
-        url = f"{base_url}/{model}:generateContent"
-        try:
-            resp = requests.post(url, headers=headers, json=payload, timeout=120)
-            if resp.status_code in (404, 400):
-                last_err = f"{model}: {resp.status_code}"
-                continue
-            resp.raise_for_status()
-            data = resp.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception as e:
-            last_err = f"{model}: {e}"
-            continue
-    raise RuntimeError(f"모든 모델 시도 실패: {last_err}")
+    resp = requests.post(url, headers=headers, json=payload, timeout=120)
+    if not resp.ok:
+        raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text[:200]}")
+    data = resp.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"]
 
 # ─────────────────────────────────────────
 # 6. 조/항 단위 파싱
