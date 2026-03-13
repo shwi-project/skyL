@@ -17,84 +17,55 @@ st.markdown("""
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important; }
+* { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif !important; }
 
-/* 배경 및 기본 컨테이너 */
-[data-testid="stAppViewContainer"] { background: #0e1015 !important; }
-[data-testid="stHeader"] { background: transparent !important; }
-.main .block-container { max-width: 820px; padding: 2.5rem 2rem 5rem; }
-hr { border-color: #1f232b !important; margin: 2rem 0 !important; }
+/* 레이아웃 여백 */
+.main .block-container { max-width: 860px; padding: 2.5rem 2rem 5rem; }
 
-/* 멀티셀렉트 & 토글 & 텍스트 */
-[data-testid="stMultiSelect"] label, [data-testid="stToggle"] label {
-    color: #8b95a5 !important;
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
+/* 🌟 핵심: 얇고 깔끔한 1px 실선 구분선 */
+hr { 
+    border: none !important; 
+    border-top: 1px solid rgba(150, 150, 150, 0.2) !important; 
+    margin: 1.5rem 0 !important; 
 }
-[data-baseweb="select"] > div {
-    background: #15181e !important;
-    border: 1px solid #262a33 !important;
+
+/* 멀티셀렉트 & 입력창 (투명도 기반으로 라이트/다크 자동 대응) */
+[data-baseweb="select"] > div,
+[data-testid="stTextInput"] input,
+[data-testid="stChatInput"] textarea {
+    background-color: transparent !important;
+    border: 1px solid rgba(150, 150, 150, 0.3) !important;
     border-radius: 8px !important;
-    transition: all 0.2s ease;
+    color: var(--text-color) !important;
 }
-[data-baseweb="select"] > div:hover { border-color: #3b82f6 !important; }
-[data-baseweb="tag"] {
-    background: rgba(59, 130, 246, 0.1) !important;
-    color: #60a5fa !important;
-    border-radius: 6px !important;
-    padding: 0 8px !important;
-}
-
-/* 세련된 탭 디자인 */
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: transparent !important;
-    border-bottom: 1px solid #1f232b !important;
-    gap: 1.5rem !important;
-}
-[data-testid="stTabs"] [data-baseweb="tab"] {
-    color: #64748b !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
-    padding: 0.8rem 0.2rem !important;
-    background: transparent !important;
-    border: none !important;
-}
-[data-testid="stTabs"] [aria-selected="true"] {
-    color: #e2e8f0 !important;
-    border-bottom: 2px solid #3b82f6 !important;
-}
-
-/* 입력창 및 채팅창 */
-[data-testid="stTextInput"] input, [data-testid="stChatInput"] textarea {
-    background: #15181e !important;
-    border: 1px solid #262a33 !important;
-    border-radius: 8px !important;
-    color: #f1f5f9 !important;
-    padding: 0.75rem 1rem !important;
-}
-[data-testid="stTextInput"] input:focus, [data-testid="stChatInput"] textarea:focus {
+[data-baseweb="select"] > div:hover,
+[data-testid="stTextInput"] input:focus,
+[data-testid="stChatInput"] textarea:focus {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 1px #3b82f6 !important;
 }
-[data-testid="stChatInput"] button {
-    background: #3b82f6 !important;
-    border-radius: 6px !important;
+
+/* 탭 디자인 (깔끔한 실선) */
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    border-bottom: 1px solid rgba(150, 150, 150, 0.2) !important;
+    gap: 1rem !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    font-weight: 600 !important;
+    padding: 0.8rem 0.5rem !important;
 }
 
-/* 채팅 메시지 & Expander */
+/* 챗 메시지 배경 제거 (깔끔하게 텍스트만) */
 [data-testid="stChatMessage"] {
     background: transparent !important;
     border: none !important;
-    padding: 0.5rem 0 !important;
 }
+
+/* Expander (접기/펴기) */
 [data-testid="stExpander"] {
-    background: #15181e !important;
-    border: 1px solid #262a33 !important;
+    background-color: var(--secondary-background-color) !important;
+    border: 1px solid rgba(150, 150, 150, 0.2) !important;
     border-radius: 8px !important;
-}
-[data-testid="stExpander"] summary {
-    color: #94a3b8 !important;
-    font-weight: 500 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -106,22 +77,46 @@ try:
     logo_html = (
         f"<img src='data:image/png;base64,{logo_b64}' "
         "style='width:42px;height:42px;object-fit:contain;"
-        "margin-right:14px;pointer-events:none;'>"
+        "margin-right:12px;pointer-events:none;'>"
     )
 except Exception:
     logo_html = "<span style='font-size:1.8rem;margin-right:12px'>🏰</span>"
 
 st.markdown(
     f"""
-<div style='display:flex;align-items:center;padding:1rem 0 1.5rem;
-            border-bottom:1px solid #1f232b;margin-bottom:2rem'>
+<div style='display:flex;align-items:center;padding:1rem 0 0.5rem; margin-bottom:0;'>
   {logo_html}
   <div>
-    <div style='font-size:1.4rem;font-weight:700;
-                color:#d4af37;letter-spacing:-0.02em;line-height:1.2'>
+    <div style='font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:var(--text-color);'>
       롯데캐슬스카이엘 규약 통합 검색
     </div>
-    <div style='font-size:0.85rem;color:#64748b;margin-top:4px;font-weight:500'>
+    <div style='font-size:0.9rem;font-weight:500;opacity:0.6;margin-top:4px;'>
+      관리규약 · 주차규약 · 커뮤니티센터 규약
+    </div>
+  </div>
+</div>""",
+    unsafe_allow_html=True,
+)# 헤더
+try:
+    with open("logo.png", "rb") as f:
+        logo_b64 = base64.b64encode(f.read()).decode()
+    logo_html = (
+        f"<img src='data:image/png;base64,{logo_b64}' "
+        "style='width:42px;height:42px;object-fit:contain;"
+        "margin-right:12px;pointer-events:none;'>"
+    )
+except Exception:
+    logo_html = "<span style='font-size:1.8rem;margin-right:12px'>🏰</span>"
+
+st.markdown(
+    f"""
+<div style='display:flex;align-items:center;padding:1rem 0 0.5rem; margin-bottom:0;'>
+  {logo_html}
+  <div>
+    <div style='font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:var(--text-color);'>
+      롯데캐슬스카이엘 규약 통합 검색
+    </div>
+    <div style='font-size:0.9rem;font-weight:500;opacity:0.6;margin-top:4px;'>
       관리규약 · 주차규약 · 커뮤니티센터 규약
     </div>
   </div>
