@@ -80,8 +80,13 @@ st.markdown("""
 /* Streamlit 헤더/풋터 숨기기 */
 [data-testid="stHeader"] { display: none !important; }
 [data-testid="stToolbar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
 #MainMenu { display: none !important; }
 footer { display: none !important; }
+footer * { display: none !important; }
+.viewerBadge_container__r5tak { display: none !important; }
+.styles_viewerBadge__CvC9N { display: none !important; }
 
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
