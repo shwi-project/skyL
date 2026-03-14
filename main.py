@@ -77,6 +77,12 @@ st.markdown("""
 
 
 
+/* Streamlit 헤더/풋터 숨기기 */
+[data-testid="stHeader"] { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+#MainMenu { display: none !important; }
+footer { display: none !important; }
+
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
