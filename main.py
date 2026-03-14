@@ -92,7 +92,7 @@ footer * { visibility: hidden !important; }
 .st-emotion-cache-h5rgaw { display: none !important; }
 
 /* 타이틀 아래 여백 축소 */
-.main .block-container { padding-top: 1rem !important; }
+.main .block-container { padding-top: 0.3rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
