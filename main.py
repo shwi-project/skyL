@@ -63,17 +63,10 @@ st.markdown("""
 }
 
 /* user 질문 텍스트 아바타 중앙 정렬 */
-[data-testid="stChatMessageAvatarUser"] + div [data-testid="stMarkdownContainer"],
-[data-testid="stChatMessageAvatarUser"] ~ [data-testid="stMarkdownContainer"] {
+.st-emotion-cache-1s8qyds {
     display: flex !important;
     align-items: center !important;
     min-height: 20px !important;
-}
-
-/* 📌 근거 항목 위 여백 */
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:has(> img[alt="📌"]),
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:first-child:not(:only-child) ~ p {
-    margin-top: 0.8rem !important;
 }
 
 /* 타이틀 아래 여백 축소 */
@@ -484,7 +477,9 @@ with tab_ai:
                         "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
                         "근거 없이 답변을 끝내지 마시오."
                     )
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\n\2", response_text)
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
+                    # 📌 앞에 br 태그로 여백 추가
+                    response_text = response_text.replace("\n📌", "\n<br>\n📌")
                     st.markdown(response_text)
 
                     all_arts = []
