@@ -52,10 +52,15 @@ st.markdown("""
     line-height: 1.7 !important;
 }
 
-/* 채팅 메시지 실선 제거 */
+/* 채팅 메시지 전체 — 실선 제거 */
 [data-testid="stChatMessage"] {
+    border: none !important;
     border-bottom: none !important;
     box-shadow: none !important;
+    outline: none !important;
+}
+[data-testid="stChatMessage"] + [data-testid="stChatMessage"] {
+    border-top: none !important;
 }
 
 /* 아바타 크기 */
@@ -67,16 +72,14 @@ st.markdown("""
     flex-shrink: 0 !important;
 }
 
-/* 질문(user) 아바타만 텍스트 중앙 정렬 */
-[data-testid="stChatMessageAvatarUser"] {
-    align-self: center !important;
-    margin-top: 0 !important;
+/* user 메시지 행 — 아바타+텍스트 수직 중앙 */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+    align-items: center !important;
 }
 
-/* 답변(assistant) 아바타는 상단 정렬 유지 */
-[data-testid="stChatMessageAvatarAssistant"] {
-    align-self: flex-start !important;
-    margin-top: 2px !important;
+/* assistant 메시지 행 — 아바타 상단 */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
+    align-items: flex-start !important;
 }
 
 /* 타이틀 아래 여백 축소 */
