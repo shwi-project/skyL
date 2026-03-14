@@ -10,7 +10,7 @@ import streamlit as st
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide")
+st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide", menu_items={})
 
 st.markdown("""
 <style>
@@ -83,10 +83,13 @@ st.markdown("""
 [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
 #MainMenu { display: none !important; }
-footer { display: none !important; }
-footer * { display: none !important; }
+footer { visibility: hidden !important; height: 0 !important; }
+footer * { visibility: hidden !important; }
+[data-testid="stBottom"] { display: none !important; }
 .viewerBadge_container__r5tak { display: none !important; }
 .styles_viewerBadge__CvC9N { display: none !important; }
+.st-emotion-cache-164nlkn { display: none !important; }
+.st-emotion-cache-h5rgaw { display: none !important; }
 
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
