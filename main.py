@@ -78,7 +78,7 @@ st.markdown("""
 
 
 /* Streamlit 헤더/풋터 숨기기 */
-[data-testid="stHeader"] { display: none !important; }
+[data-testid="stHeader"] { display: none !important; height: 0 !important; }
 [data-testid="stToolbar"] { display: none !important; }
 [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
@@ -92,7 +92,7 @@ footer * { visibility: hidden !important; }
 .st-emotion-cache-h5rgaw { display: none !important; }
 
 /* 타이틀 아래 여백 축소 */
-.main .block-container { padding-top: 0 !important; margin-top: -4rem !important; }
+.main .block-container { padding-top: 0 !important; margin-top: -6rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
