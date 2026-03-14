@@ -32,12 +32,14 @@ st.markdown("""
 }
 
 /* AI 채팅 메시지 텍스트 크기 및 간격 */
-[data-testid="stChatMessage"] p {
+/* assistant 답변 내 p에만 적용 (user 메시지 레이아웃 보호) */
+[data-testid="stChatMessageAvatarAssistant"] ~ div p {
     font-size: 0.85rem !important;
     line-height: 1.7 !important;
     margin-bottom: 0.4rem !important;
 }
 [data-testid="stChatMessage"] li {
+    font-size: 0.85rem !important;
     margin-bottom: 0.3rem !important;
     line-height: 1.7 !important;
 }
