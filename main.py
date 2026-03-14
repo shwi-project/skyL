@@ -44,10 +44,15 @@ st.markdown("""
     padding: 0.5rem !important;
     gap: 0.4rem !important;
 }
-/* 아바타 숨기기 — 여백 제거 */
-[data-testid="stChatMessageAvatarUser"],
+/* assistant 아바타만 숨기기 */
 [data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
+}
+/* user 아바타 크기 유지 */
+[data-testid="stChatMessageAvatarUser"] {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
 }
 
 /* AI 채팅 메시지 텍스트 크기 및 간격 */
