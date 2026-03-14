@@ -62,6 +62,20 @@ st.markdown("""
     min-width: 20px !important;
 }
 
+/* user 질문 텍스트 아바타 중앙 정렬 */
+[data-testid="stChatMessageAvatarUser"] + div [data-testid="stMarkdownContainer"],
+[data-testid="stChatMessageAvatarUser"] ~ [data-testid="stMarkdownContainer"] {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 20px !important;
+}
+
+/* 📌 근거 항목 위 여백 */
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:has(> img[alt="📌"]),
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:first-child:not(:only-child) ~ p {
+    margin-top: 0.8rem !important;
+}
+
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
@@ -470,7 +484,7 @@ with tab_ai:
                         "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
                         "근거 없이 답변을 끝내지 마시오."
                     )
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\n\2", response_text)
                     st.markdown(response_text)
 
                     all_arts = []
