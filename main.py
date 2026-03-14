@@ -52,35 +52,7 @@ st.markdown("""
     line-height: 1.7 !important;
 }
 
-/* 채팅 메시지 전체 — 실선 제거 */
-[data-testid="stChatMessage"] {
-    border: none !important;
-    border-bottom: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-[data-testid="stChatMessage"] + [data-testid="stChatMessage"] {
-    border-top: none !important;
-}
 
-/* 아바타 크기 */
-[data-testid="stChatMessageAvatarUser"],
-[data-testid="stChatMessageAvatarAssistant"] {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    flex-shrink: 0 !important;
-}
-
-/* user 메시지 행 — 아바타+텍스트 수직 중앙 */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    align-items: center !important;
-}
-
-/* assistant 메시지 행 — 아바타 상단 */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-    align-items: flex-start !important;
-}
 
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
