@@ -31,13 +31,12 @@ st.markdown("""
     font-size: 0.82rem !important;
 }
 
-/* AI 채팅 메시지 텍스트 크기 */
+/* AI 채팅 메시지 텍스트 크기 및 간격 */
 [data-testid="stChatMessage"] p {
     font-size: 0.85rem !important;
     line-height: 1.7 !important;
+    margin-bottom: 0.4rem !important;
 }
-
-/* 채팅 메시지 줄간격 */
 [data-testid="stChatMessage"] li {
     margin-bottom: 0.3rem !important;
     line-height: 1.7 !important;
@@ -46,10 +45,6 @@ st.markdown("""
 [data-testid="stChatMessage"] ol {
     margin-top: 0.4rem !important;
     margin-bottom: 0.4rem !important;
-}
-[data-testid="stChatMessage"] p {
-    margin-bottom: 0.4rem !important;
-    line-height: 1.7 !important;
 }
 
 
