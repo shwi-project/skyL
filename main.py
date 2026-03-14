@@ -54,20 +54,7 @@ st.markdown("""
 
 
 
-/* 아바타 크기 축소 */
-[data-testid="stChatMessageAvatarUser"],
-[data-testid="stChatMessageAvatarAssistant"] {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-}
 
-/* user 질문 텍스트 아바타 중앙 정렬 */
-.st-emotion-cache-1s8qyds {
-    display: flex !important;
-    align-items: center !important;
-    min-height: 20px !important;
-}
 
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 1rem !important; }
@@ -478,8 +465,7 @@ with tab_ai:
                         "근거 없이 답변을 끝내지 마시오."
                     )
                     response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
-                    # 📌 앞에 br 태그로 여백 추가
-                    response_text = response_text.replace("\n📌", "\n<br>\n📌")
+
                     st.markdown(response_text)
 
                     all_arts = []
