@@ -82,7 +82,13 @@ st.markdown("""
 
 
 /* 타이틀 아래 여백 축소 */
-.main .block-container { padding-top: 0 !important; margin-top: -3rem !important; }
+.main .block-container { padding-top: 0 !important; }
+[data-testid="stMainBlockContainer"] {
+    padding-top: 1rem !important;
+}
+.st-emotion-cache-zy6yx3 {
+    padding-top: 1rem !important;
+}
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
