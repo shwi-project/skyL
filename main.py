@@ -81,6 +81,11 @@ st.markdown("""
 
 
 
+/* Streamlit 푸터 배지 숨기기 */
+[class*="profilePreview"] { display: none !important; }
+[class*="_link_gzau3"] { display: none !important; }
+[class*="viewerBadge"] { display: none !important; }
+
 /* 타이틀 아래 여백 축소 */
 .main .block-container { padding-top: 0 !important; }
 [data-testid="stMainBlockContainer"] {
