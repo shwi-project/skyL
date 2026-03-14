@@ -52,21 +52,31 @@ st.markdown("""
     line-height: 1.7 !important;
 }
 
-/* 채팅 메시지 컨테이너 — 아바타 중앙 정렬, 실선 제거 */
+/* 채팅 메시지 실선 제거 */
 [data-testid="stChatMessage"] {
-    align-items: center !important;
     border-bottom: none !important;
     box-shadow: none !important;
 }
 
-/* 채팅 아바타 크기 및 정렬 */
+/* 아바타 크기 */
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
     width: 20px !important;
     height: 20px !important;
     min-width: 20px !important;
     flex-shrink: 0 !important;
+}
+
+/* 질문(user) 아바타만 텍스트 중앙 정렬 */
+[data-testid="stChatMessageAvatarUser"] {
     align-self: center !important;
+    margin-top: 0 !important;
+}
+
+/* 답변(assistant) 아바타는 상단 정렬 유지 */
+[data-testid="stChatMessageAvatarAssistant"] {
+    align-self: flex-start !important;
+    margin-top: 2px !important;
 }
 
 /* 타이틀 아래 여백 축소 */
