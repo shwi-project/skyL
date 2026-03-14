@@ -470,7 +470,7 @@ with tab_ai:
                         "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
                         "근거 없이 답변을 끝내지 마시오."
                     )
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n---\n\2", response_text)
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
                     st.markdown(response_text)
 
                     all_arts = []
