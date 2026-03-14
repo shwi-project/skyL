@@ -31,6 +31,11 @@ st.markdown("""
     font-size: 0.82rem !important;
 }
 
+/* assistant 메시지 컨텐츠 왼쪽 여백 축소 */
+[data-testid="stChatMessage"] {
+    padding-left: 0.5rem !important;
+}
+
 /* AI 채팅 메시지 텍스트 크기 및 간격 */
 /* assistant 답변 내 p에만 적용 (user 메시지 레이아웃 보호) */
 [data-testid="stChatMessageAvatarAssistant"] ~ div p {
