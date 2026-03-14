@@ -39,10 +39,17 @@ st.markdown("""
     min-width: 24px !important;
 }
 
-/* 채팅 메시지 내부 패딩 축소 */
+/* 채팅 메시지 내부 패딩 및 아바타 컨테이너 축소 */
 [data-testid="stChatMessage"] {
     padding: 0.6rem 0.8rem !important;
-    gap: 0.5rem !important;
+    gap: 0.4rem !important;
+}
+/* 아바타 감싸는 컨테이너 width 강제 축소 */
+[data-testid="stChatMessage"] > div:first-child {
+    width: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    flex: 0 0 24px !important;
 }
 
 /* AI 채팅 메시지 텍스트 크기 및 간격 */
