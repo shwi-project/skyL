@@ -78,10 +78,7 @@ st.markdown("""
 
 
 /* Streamlit 헤더/풋터 숨기기 */
-[data-testid="stHeader"] { display: none !important; }
-[data-testid="stAppViewContainer"] > section:first-child { padding-top: 0 !important; }
-[data-testid="stMain"] { padding-top: 0 !important; }
-section.main > div { padding-top: 0.5rem !important; }
+
 [data-testid="stToolbar"] { display: none !important; }
 [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stStatusWidget"] { display: none !important; }
