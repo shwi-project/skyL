@@ -487,16 +487,12 @@ tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 # TAB A — 키워드 검색
 # ══════════════════════════════════════════
 with tab_keyword:
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        if st.session_state.pop("_keyword_clear", False):
-            st.session_state["keyword_input"] = ""
-        keyword = st.text_input(
-            "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
-            label_visibility="collapsed", key="keyword_input",
-        )
-    with col2:
-        use_ai = st.toggle("AI 요약", value=False, disabled=not api_ready, key="ai_toggle")
+    if st.session_state.pop("_keyword_clear", False):
+        st.session_state["keyword_input"] = ""
+    keyword = st.text_input(
+        "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
+        label_visibility="collapsed", key="keyword_input",
+    )
 
     if keyword:
         kw = keyword.lower()
@@ -511,27 +507,6 @@ with tab_keyword:
             st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
         else:
             st.success(f"총 **{len(matched)}개** 조항 발견")
-
-            if use_ai and api_ready:
-                cache_key = f"summary_{keyword}"
-                if cache_key not in st.session_state:
-                    docs = list({a["doc"] for a in matched})
-                    ctx  = "\n\n".join(f"=== [{n}] ===\n{pdf_texts[n]}" for n in docs if n in pdf_texts)
-                    with st.spinner("AI가 요약하는 중..."):
-                        try:
-                            st.session_state[cache_key] = ai_generate(
-                                f"아파트 규약에서 '{keyword}' 관련 내용을 찾아 요약해줘.\n"
-                                f"구체적인 기준(시간, 금액, 횟수 등)이 있으면 반드시 포함하고,\n"
-                                f"관련 조항번호(규약명 + 조항번호)를 마지막에 명시해줘.\n"
-                                f"서론 없이 바로 내용부터 시작해줘.\n\n[규약 전문]\n{ctx}"
-                            )
-                        except Exception as e:
-                            st.warning(f"AI 요약 실패: {e}")
-                            st.session_state[cache_key] = None
-
-                if st.session_state.get(cache_key):
-                    st.markdown("##### AI 요약")
-                    st.markdown(st.session_state[cache_key])
 
             st.divider()
             for art in matched:
