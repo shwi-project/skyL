@@ -56,7 +56,6 @@ st.markdown("""
 }
 
 /* AI 채팅 메시지 텍스트 크기 및 간격 */
-/* assistant 답변 내 p에만 적용 (user 메시지 레이아웃 보호) */
 [data-testid="stChatMessageAvatarAssistant"] ~ div p {
     font-size: 0.85rem !important;
     line-height: 1.7 !important;
@@ -72,14 +71,6 @@ st.markdown("""
     margin-top: 0.4rem !important;
     margin-bottom: 0.4rem !important;
 }
-
-
-
-
-
-/* Streamlit 헤더/풋터 숨기기 */
-
-
 
 /* Streamlit 푸터 배지 숨기기 */
 [class*="profilePreview"] { display: none !important; }
@@ -121,6 +112,16 @@ st.markdown(
 )
 
 # ─────────────────────────────────────────
+# ⚙️ 컨텍스트 압축 설정
+# True  → 관리규약 질문 시 관련 조항만 추려서 전송 (토큰 절약)
+# False → 기존 방식대로 규약 전문 전체 전송 (원복)
+# ─────────────────────────────────────────
+USE_CONTEXT_COMPRESSION = True
+
+# 압축 시 최대 조항 수 (많을수록 품질↑, 토큰↑)
+MAX_ARTICLES_IN_CONTEXT = 40
+
+# ─────────────────────────────────────────
 # 1. API 키
 # ─────────────────────────────────────────
 try:
@@ -157,6 +158,9 @@ PDF_FILES = {
     "커뮤니티센터 규약": "rules_community.pdf",
 }
 
+# 압축 적용 대상 규약 (전문이 긴 규약만)
+COMPRESSION_TARGET_DOCS = {"관리규약"}
+
 pdf_texts: dict[str, str] = {}
 for name, path in PDF_FILES.items():
     t = load_pdf_text(path)
@@ -173,7 +177,6 @@ loaded_names = list(pdf_texts.keys())
 # 3. 검색 대상 선택
 # ─────────────────────────────────────────
 st.divider()
-# 규약 선택 버튼 (순서 고정)
 DOC_ORDER = [n for n in ["주차규약", "커뮤니티센터 규약", "관리규약"] if n in pdf_texts]
 
 if "selected_doc" not in st.session_state or st.session_state.selected_doc not in DOC_ORDER:
@@ -270,7 +273,6 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
     return articles
 
 def parse_attachments(doc_name: str, text: str) -> list[dict]:
-    """첨부 #N / 별표N 블록을 조항처럼 파싱."""
     results = []
     pat = re.compile(
         r"((?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)[^\n]*(?:\n(?!(?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)).+)*)",
@@ -292,6 +294,86 @@ def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
     arts = parse_articles(doc_name, text)
     arts += parse_attachments(doc_name, text)
     return arts
+
+# ─────────────────────────────────────────
+# 5-1. 컨텍스트 압축 — 질문 관련 조항 추출
+# ─────────────────────────────────────────
+# 한국어 불용어 (검색 의미 없는 단어)
+_STOPWORDS = {
+    "은", "는", "이", "가", "을", "를", "의", "에", "서", "도", "만",
+    "로", "으로", "와", "과", "한", "하다", "있다", "없다", "되다",
+    "하면", "되면", "인지", "어떤", "어떻게", "무엇", "언제", "어디",
+    "뭐야", "뭐", "인가", "나요", "까요", "예요", "이에요", "있나요",
+    "있어요", "없나요", "알려줘", "알려주세요", "궁금해", "궁금합니다",
+}
+
+def extract_keywords(question: str) -> list[str]:
+    """질문에서 의미 있는 키워드 추출 (2글자 이상 명사/복합어 위주)"""
+    # 특수문자 제거 후 2글자 이상 단어 추출
+    words = re.findall(r"[가-힣a-zA-Z0-9]{2,}", question)
+    keywords = [w for w in words if w not in _STOPWORDS]
+    return keywords
+
+def score_article(art: dict, keywords: list[str]) -> int:
+    """조항과 키워드 간 매칭 점수 계산"""
+    score = 0
+    title_lower = art["title"].lower()
+    content_lower = art["content"].lower()
+    for kw in keywords:
+        kw_lower = kw.lower()
+        if kw_lower in title_lower:
+            score += 3   # 제목 매칭은 가중치 높게
+        elif kw_lower in content_lower:
+            score += 1
+    return score
+
+def build_compressed_context(doc_name: str, question: str, all_arts: list[dict]) -> str:
+    """
+    관리규약 대상으로 질문과 관련된 조항만 추려서 컨텍스트 생성.
+    관련 조항이 없으면 전체 전문 반환 (fallback).
+    """
+    keywords = extract_keywords(question)
+    if not keywords:
+        return f"=== [{doc_name}] ===\n{pdf_texts[doc_name]}"
+
+    # 점수 계산
+    scored = []
+    for art in all_arts:
+        if art["doc"] != doc_name:
+            continue
+        s = score_article(art, keywords)
+        if s > 0:
+            scored.append((s, art))
+
+    # 점수 높은 순 정렬, 최대 MAX_ARTICLES_IN_CONTEXT개
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_arts = [art for _, art in scored[:MAX_ARTICLES_IN_CONTEXT]]
+
+    if not top_arts:
+        # 관련 조항 없으면 전체 전문 fallback
+        return f"=== [{doc_name}] ===\n{pdf_texts[doc_name]}"
+
+    # 원래 조항 순서대로 재정렬 (번호 순)
+    def art_sort_key(a):
+        m = re.search(r"제\s*(\d+)\s*조", a["title"])
+        return int(m.group(1)) if m else 9999
+
+    top_arts.sort(key=art_sort_key)
+
+    ctx_parts = [f"=== [{doc_name}] (관련 조항 {len(top_arts)}개) ==="]
+    for art in top_arts:
+        ctx_parts.append(art["content"])
+
+    return "\n\n".join(ctx_parts)
+
+def get_context_for_ai(doc_name: str, question: str, all_arts: list[dict]) -> str:
+    """
+    USE_CONTEXT_COMPRESSION 플래그와 대상 규약에 따라
+    전체 전문 또는 압축 컨텍스트 반환
+    """
+    if USE_CONTEXT_COMPRESSION and doc_name in COMPRESSION_TARGET_DOCS:
+        return build_compressed_context(doc_name, question, all_arts)
+    return f"=== [{doc_name}] ===\n{pdf_texts[doc_name]}"
 
 # ─────────────────────────────────────────
 # 6. 근거 조항 추출 (AI 응답 → 규약명+조번호)
@@ -328,11 +410,9 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
     related   = []
     seen_keys = set()
 
-    # 📌 이후 텍스트만 파싱 (근거 부분만 처리)
     anchor_text = " ".join(re.findall(r"📌\s*([^\n]+)", response_text))
     search_text = anchor_text if anchor_text else response_text
 
-    # 제N조 매칭
     for doc_name, num in extract_pairs(search_text):
         key = (doc_name, num)
         if key in seen_keys:
@@ -344,7 +424,6 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
                 related.append(art)
                 break
 
-    # 첨부 #N 매칭
     attach_pat = re.compile(r"첨부\s*#(\d+)")
     for am in attach_pat.finditer(search_text):
         attach_title = f"첨부 #{am.group(1)}"
@@ -353,7 +432,6 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
                 related.append(art)
                 break
 
-    # 별표N 매칭 — doc_name도 함께 파악
     byulpyo_pat = re.compile(
         r"(관리규약|주차규약|커뮤니티센터\s*규약).*?별표\s*(\d+)"
         r"|별표\s*(\d+)"
@@ -365,7 +443,6 @@ def find_related_articles(response_text: str, all_arts: list[dict]) -> list[dict
         for art in all_arts:
             if doc_name and art["doc"] != doc_name:
                 continue
-            # 실제 별표 섹션만 매칭 (제목이 충분히 길고 별표로 시작하는 것)
             if re.search(rf"별표\s*{num}", art["title"]) and len(art["title"]) > 10 and art not in related:
                 related.append(art)
                 break
@@ -478,8 +555,16 @@ with tab_ai:
         with st.chat_message("assistant"):
             with st.spinner("AI가 답변을 생성하는 중..."):
                 try:
+                    # 조항 파싱 (압축용)
+                    all_arts = []
+                    for dn in selected_names:
+                        all_arts += get_articles(dn, pdf_texts[dn])
+
+                    # 컨텍스트 결정 (압축 or 전체)
+                    context = get_context_for_ai(selected, prompt, all_arts)
+
                     response_text = ai_generate(
-                        f"[규약 전문]\n{combined_text}\n\n"
+                        f"[규약 전문]\n{context}\n\n"
                         f"[질문]\n{prompt}\n\n"
                         "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
                         "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
@@ -490,15 +575,12 @@ with tab_ai:
                         "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
                         "4. 근거 뒤에 항목번호(가., ①, ② 등)는 붙이지 마시오\n"
                         "5. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
-                        "근거 없이 답변을 끝내지 마시오.\n"
+                        "근거 없이 답변을 끝내지 마시오."
                     )
                     response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
 
                     st.markdown(response_text)
 
-                    all_arts = []
-                    for dn in selected_names:
-                        all_arts += get_articles(dn, pdf_texts[dn])
                     related = find_related_articles(response_text, all_arts)
                     if related:
                         with st.expander("📋 관련 조항 원문 보기", expanded=False):
