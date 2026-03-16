@@ -481,9 +481,10 @@ with tab_keyword:
         matched: list[dict] = []
         for doc_name in DOC_ORDER:
             arts = get_articles(doc_name, pdf_texts[doc_name])
-            matched.extend(a for a in arts if kw in a["title"].lower())
-            matched.extend(a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower())
-        matched = matched[:10]
+            doc_matched = []
+            doc_matched.extend(a for a in arts if kw in a["title"].lower())
+            doc_matched.extend(a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower())
+            matched.extend(doc_matched[:20])
 
         if not matched:
             st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
