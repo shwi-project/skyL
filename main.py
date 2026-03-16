@@ -668,7 +668,7 @@ with tab_ai:
 
                     st.markdown(response_text)
 
-                    related = find_related_articles(response_text, all_arts, selected)
+                    related = [] if selected == "생활안내" else find_related_articles(response_text, all_arts, selected)
                     if related:
                         with st.expander("📋 관련 내용 원문 보기", expanded=False):
                             for art in related:
