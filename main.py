@@ -613,7 +613,7 @@ def _collapse_citations(text: str) -> str:
 
     # body 끝의 빈 줄 정리 후 근거 붙이기
     body = "\n".join(body_lines).rstrip()
-    return body + "\n\n---\n\n" + "\n".join(merged)
+    return body + "\n\n&nbsp;\n\n" + "\n".join(merged)
 
 # ─────────────────────────────────────────
 # 10. 카드 렌더링
