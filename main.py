@@ -74,13 +74,14 @@ st.markdown("""
 #MainMenu { display: none !important; }
 [data-testid="stMainMenu"] { display: none !important; }
 header [data-testid="stToolbar"] { display: none !important; }
+header { display: none !important; }
 
 .main .block-container { padding-top: 0 !important; }
 [data-testid="stMainBlockContainer"] {
-    padding-top: 3rem !important;
+    padding-top: 1rem !important;
 }
 .st-emotion-cache-zy6yx3 {
-    padding-top: 3rem !important;
+    padding-top: 1rem !important;
 }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
