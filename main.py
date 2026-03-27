@@ -609,13 +609,23 @@ with tab_keyword:
     keyword_docs = [n for n in DOC_ORDER if n != "생활안내"]
 
     if keyword:
-        kw = keyword.lower()
+        # 동의어 확장: 입력 키워드 + 매핑된 규약 원문 용어
+        search_terms = [keyword.lower()]
+        for syn_key, syn_val in _SYNONYMS.items():
+            if syn_key in keyword and syn_val.lower() not in search_terms:
+                search_terms.append(syn_val.lower())
+
         matched: list[dict] = []
         for doc_name in keyword_docs:
             arts = get_articles(doc_name, pdf_texts[doc_name])
             doc_matched = []
-            doc_matched.extend(a for a in arts if kw in a["title"].lower())
-            doc_matched.extend(a for a in arts if kw in a["content"].lower() and kw not in a["title"].lower())
+            for a in arts:
+                title_l = a["title"].lower()
+                content_l = a["content"].lower()
+                if any(t in title_l for t in search_terms):
+                    doc_matched.append(a)
+                elif any(t in content_l for t in search_terms):
+                    doc_matched.append(a)
             matched.extend(doc_matched[:20])
 
         if not matched:
