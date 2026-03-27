@@ -152,12 +152,12 @@ def load_text_file(path: str) -> str:
 # 3. 문서 로드
 # ─────────────────────────────────────────
 PDF_FILES = {
-    "관리규약":         "rules_management.pdf",
     "주차규약":         "rules_parking.pdf",
     "커뮤니티센터 규약": "rules_community.pdf",
 }
 
 TEXT_FILES = {
+    "관리규약": "rules_management.txt",
     "생활안내": "입주안내문_전체.txt",
 }
 
@@ -237,6 +237,8 @@ TITLE_RE = re.compile(
     r"제\s*(\d+)\s*조(?:의\s*\d+)?"
     r"(?:\s*【([^】]*)】|\s*\(([^\)]{1,20})\)|\s+([가-힣a-zA-Z\s·,]{2,20}?))?"
 )
+# 관리규약 텍스트 파일용: 제N조【제목】 또는 제N조(제목) 형식만 유효 조항으로 인정
+_VALID_ARTICLE_RE = re.compile(r"제\s*\d+\s*조(?:의\s*\d+)?\s*[【\(]")
 
 def extract_title(first_line: str) -> str:
     tm = TITLE_RE.match(first_line)
@@ -253,9 +255,16 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
     for m in ARTICLE_RE.finditer(text):
         block = m.group(0).strip()
         lines = [l for l in block.splitlines() if l.strip()]
-        if len(lines) <= 1:
+        if not lines:
             continue
-        title = extract_title(lines[0])
+        first = lines[0].strip()
+        # 관리규약(텍스트): 제N조【】 또는 제N조() 형식만 허용
+        if doc_name == "관리규약" and not _VALID_ARTICLE_RE.match(first):
+            continue
+        # 기존 로직: 1줄짜리는 내용이 너무 짧으면 스킵 (관리규약은 1줄 조항도 허용)
+        if len(lines) <= 1 and doc_name != "관리규약":
+            continue
+        title = extract_title(first)
         if len(block) > 1500:
             block = block[:1500].strip() + "...(이하 생략)"
         articles.append({"doc": doc_name, "title": title, "content": block})
@@ -264,7 +273,7 @@ def parse_articles(doc_name: str, text: str) -> list[dict]:
 def parse_attachments(doc_name: str, text: str) -> list[dict]:
     results = []
     pat = re.compile(
-        r"((?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)[^\n]*(?:\n(?!(?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>)).+)*)",
+        r"((?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>|\[별표\s*\d+\])[^\n]*(?:\n(?!(?:(?:▣\s*)?첨부\s*#\d+|<별표\s*\d+>|\[별표\s*\d+\])).+)*)",
         re.MULTILINE
     )
     for m in pat.finditer(text):
@@ -323,7 +332,7 @@ def parse_numbered_items(doc_name: str, parent_title: str, text: str) -> list[di
     return items
 
 @st.cache_data(show_spinner=False)
-def get_articles(doc_name: str, text: str, _v: int = 1) -> list[dict]:
+def get_articles(doc_name: str, text: str, _v: int = 2) -> list[dict]:
     if doc_name == "생활안내":
         return parse_sections(doc_name, text)
     arts = parse_articles(doc_name, text)
