@@ -350,9 +350,30 @@ _STOPWORDS = {
     "있어요", "없나요", "알려줘", "알려주세요", "궁금해", "궁금합니다",
 }
 
+# 주민들이 자주 쓰는 줄임말 → 규약 원문 용어 매핑
+_SYNONYMS = {
+    "동대표": "동별 대표자",
+    "대표회의": "입주자대표회의",
+    "관리비": "관리비",
+    "장기수선": "장기수선충당금",
+    "관리소": "관리사무소",
+    "관리소장": "관리사무소장",
+    "주차장": "주차시설",
+    "놀이터": "어린이놀이터",
+    "헬스장": "주민운동시설",
+    "커뮤니티": "주민공동시설",
+}
+
 def extract_keywords(question: str) -> list[str]:
     words = re.findall(r"[가-힣a-zA-Z0-9]{2,}", question)
-    return [w for w in words if w not in _STOPWORDS]
+    filtered = [w for w in words if w not in _STOPWORDS]
+    expanded = []
+    for w in filtered:
+        expanded.append(w)
+        for syn_key, syn_val in _SYNONYMS.items():
+            if syn_key in w and syn_val not in expanded:
+                expanded.append(syn_val)
+    return expanded
 
 def score_article(art: dict, keywords: list[str]) -> int:
     score = 0
