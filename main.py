@@ -613,7 +613,7 @@ def _collapse_citations(text: str) -> str:
 
     # body 끝의 빈 줄 정리 후 근거 붙이기
     body = "\n".join(body_lines).rstrip()
-    return body + "\n\n<br>\n\n" + "\n".join(merged)
+    return body + "\n\n" + "\n".join(merged)
 
 # ─────────────────────────────────────────
 # 10. 카드 렌더링
@@ -776,7 +776,19 @@ with tab_ai:
                     response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
                     response_text = _collapse_citations(response_text)
 
-                    st.markdown(response_text)
+                    # 본문과 📌 근거를 분리하여 여백 확보
+                    _lines = response_text.split("\n")
+                    _body = []
+                    _cites = []
+                    for _l in _lines:
+                        if _l.strip().startswith("📌"):
+                            _cites.append(_l)
+                        else:
+                            _body.append(_l)
+                    st.markdown("\n".join(_body).rstrip())
+                    if _cites:
+                        st.markdown("")  # 여백
+                        st.markdown("\n".join(_cites))
 
                     related = [] if selected == "생활안내" else find_related_articles(response_text, all_arts, selected)
                     if related:
@@ -795,7 +807,18 @@ with tab_ai:
         with st.chat_message("user"):
             st.markdown(st.session_state.ai_question)
         with st.chat_message("assistant"):
-            st.markdown(st.session_state.ai_response)
+            _lines2 = st.session_state.ai_response.split("\n")
+            _body2 = []
+            _cites2 = []
+            for _l2 in _lines2:
+                if _l2.strip().startswith("📌"):
+                    _cites2.append(_l2)
+                else:
+                    _body2.append(_l2)
+            st.markdown("\n".join(_body2).rstrip())
+            if _cites2:
+                st.markdown("")
+                st.markdown("\n".join(_cites2))
             if st.session_state.ai_articles:
                 with st.expander("📋 관련 내용 원문 보기", expanded=False):
                     for art in st.session_state.ai_articles:
