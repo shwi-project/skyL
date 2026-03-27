@@ -100,7 +100,7 @@ except Exception:
     logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
 
 st.markdown(
-    f"""<div style='display:flex;align-items:flex-start;margin-bottom:2px'>
+    f"""<div style='display:flex;align-items:flex-start;margin-bottom:12px'>
     {logo_html}
     <div style='line-height:1.2'>
       <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
