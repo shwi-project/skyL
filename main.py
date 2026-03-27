@@ -571,14 +571,17 @@ DOC_COLORS = {
     "생활안내":         "#7b4f9e",
 }
 
-def render_article_card(art: dict, keyword: str = "") -> None:
+def render_article_card(art: dict, keyword: str = "", highlights: list[str] = None) -> None:
     content = art["content"]
-    if keyword:
-        content = re.sub(
-            f"(?i)({re.escape(keyword)})",
-            r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
-            content,
-        )
+    # 하이라이트 대상: 명시적 리스트 또는 단일 키워드
+    terms = highlights if highlights else ([keyword] if keyword else [])
+    for term in terms:
+        if term:
+            content = re.sub(
+                f"(?i)({re.escape(term)})",
+                r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
+                content,
+            )
     bc = DOC_COLORS.get(art["doc"], "#555")
     # 생활안내는 섹션 제목에서 > 이후만 표시
     display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
@@ -638,7 +641,7 @@ with tab_keyword:
             st.success(f"총 **{len(matched)}개** 조항 발견")
             st.divider()
             for art in matched:
-                render_article_card(art, keyword)
+                render_article_card(art, highlights=search_terms)
 
 # ══════════════════════════════════════════
 # TAB B — AI 질문 검색
@@ -648,13 +651,14 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 규약 선택 버튼
+    # 규약 선택 버튼 (모바일 대응: 짧은 라벨)
+    _DOC_SHORT = {"주차규약": "주차", "커뮤니티센터 규약": "커뮤니티", "관리규약": "관리", "생활안내": "생활"}
     ai_cols = st.columns(len(DOC_ORDER))
     for i, doc in enumerate(DOC_ORDER):
         with ai_cols[i]:
             is_active = st.session_state.selected_doc == doc
             if st.button(
-                doc,
+                _DOC_SHORT.get(doc, doc),
                 key=f"doc_btn_{doc}",
                 use_container_width=True,
                 type="primary" if is_active else "secondary",
@@ -697,7 +701,13 @@ with tab_ai:
                 "근거 없이 답변을 끝내지 마시오."
             )
 
-    if prompt := st.chat_input("질문을 입력하세요  (예: 방문차량 무료 주차는 몇 시간까지야?)"):
+    _PLACEHOLDERS = {
+        "주차규약": "예: 방문차량 무료 주차는 몇 시간까지야?",
+        "커뮤니티센터 규약": "예: 헬스장 이용시간이 어떻게 돼?",
+        "관리규약": "예: 동대표 자격요건이 뭐야?",
+        "생활안내": "예: 쓰레기 분리수거는 어떻게 해?",
+    }
+    if prompt := st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요")):
         with st.chat_message("user"):
             st.markdown(prompt)
         with st.chat_message("assistant"):
