@@ -671,9 +671,8 @@ with tab_ai:
 
     selected = st.session_state.selected_doc
 
-    for k in ("ai_question", "ai_response", "ai_articles"):
-        if k not in st.session_state:
-            st.session_state[k] = None if k != "ai_articles" else []
+    if "ai_history" not in st.session_state:
+        st.session_state.ai_history = {}  # {doc_name: [{question, response, articles}, ...]}
 
     # 문서별 시스템 프롬프트 분기
     def build_prompt(doc_name: str, context: str, question: str) -> str:
@@ -710,6 +709,19 @@ with tab_ai:
         "관리규약": "예: 동대표 자격요건이 뭐야?",
         "생활안내": "예: 쓰레기 분리수거는 어떻게 해?",
     }
+    # 이전 대화 히스토리 렌더링
+    history = st.session_state.ai_history.get(selected, [])
+    for entry in history:
+        with st.chat_message("user"):
+            st.markdown(entry["question"])
+        with st.chat_message("assistant"):
+            st.markdown(entry["response"])
+            if entry["articles"]:
+                with st.expander("📋 관련 내용 원문 보기", expanded=False):
+                    for art in entry["articles"]:
+                        render_article_card(art)
+
+    # 새 질문 처리
     if prompt := st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요")):
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -731,19 +743,14 @@ with tab_ai:
                             for art in related:
                                 render_article_card(art)
 
-                    st.session_state.ai_question = prompt
-                    st.session_state.ai_response = response_text
-                    st.session_state.ai_articles = related
+                    # 히스토리에 추가
+                    if selected not in st.session_state.ai_history:
+                        st.session_state.ai_history[selected] = []
+                    st.session_state.ai_history[selected].append({
+                        "question": prompt,
+                        "response": response_text,
+                        "articles": related,
+                    })
 
                 except Exception as e:
                     st.error(f"❌ 오류 발생: {e}")
-
-    elif st.session_state.ai_question:
-        with st.chat_message("user"):
-            st.markdown(st.session_state.ai_question)
-        with st.chat_message("assistant"):
-            st.markdown(st.session_state.ai_response)
-            if st.session_state.ai_articles:
-                with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                    for art in st.session_state.ai_articles:
-                        render_article_card(art)
