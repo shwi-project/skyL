@@ -188,7 +188,6 @@ if not pdf_texts:
 # ─────────────────────────────────────────
 # 4. 공통 상수
 # ─────────────────────────────────────────
-st.divider()
 DOC_ORDER = [n for n in ["주차규약", "커뮤니티센터 규약", "관리규약", "생활안내"] if n in pdf_texts]
 
 if "selected_doc" not in st.session_state or st.session_state.selected_doc not in DOC_ORDER:
