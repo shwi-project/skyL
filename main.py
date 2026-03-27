@@ -71,6 +71,10 @@ st.markdown("""
 [class*="_link_gzau3"] { display: none !important; }
 [class*="viewerBadge"] { display: none !important; }
 
+#MainMenu { display: none !important; }
+[data-testid="stMainMenu"] { display: none !important; }
+header [data-testid="stToolbar"] { display: none !important; }
+
 .main .block-container { padding-top: 0 !important; }
 [data-testid="stMainBlockContainer"] {
     padding-top: 3rem !important;
