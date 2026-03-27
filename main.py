@@ -28,6 +28,10 @@ st.markdown("""
 [data-testid="stButton"] button p {
     font-size: 0.82rem !important;
 }
+[data-testid="stButton"] button {
+    padding: 0.3rem 0.5rem !important;
+    min-height: 0 !important;
+}
 
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
@@ -659,6 +663,7 @@ with tab_ai:
             if st.button(
                 doc,
                 key=f"doc_btn_{doc}",
+                use_container_width=True,
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state.selected_doc = doc
