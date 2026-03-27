@@ -28,6 +28,10 @@ st.markdown("""
 [data-testid="stButton"] button p {
     font-size: 0.82rem !important;
 }
+[data-testid="stButton"] button {
+    padding: 0.3rem 0.5rem !important;
+    min-height: 0 !important;
+}
 
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
@@ -651,19 +655,20 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 규약 선택 버튼 (모바일 대응: 짧은 라벨)
-    _DOC_SHORT = {"주차규약": "주차", "커뮤니티센터 규약": "커뮤니티", "관리규약": "관리", "생활안내": "생활"}
     ai_cols = st.columns(len(DOC_ORDER))
     for i, doc in enumerate(DOC_ORDER):
         with ai_cols[i]:
             is_active = st.session_state.selected_doc == doc
             if st.button(
-                _DOC_SHORT.get(doc, doc),
+                doc,
                 key=f"doc_btn_{doc}",
                 use_container_width=True,
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state.selected_doc = doc
+                st.session_state.ai_question = None
+                st.session_state.ai_response = None
+                st.session_state.ai_articles = []
                 st.rerun()
 
     selected = st.session_state.selected_doc
