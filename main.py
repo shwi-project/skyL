@@ -566,6 +566,56 @@ def find_related_articles(response_text: str, all_arts: list[dict], doc_name: st
     return related
 
 # ─────────────────────────────────────────
+# 9-1. 📌 근거 한 줄 합치기
+# ─────────────────────────────────────────
+def _collapse_citations(text: str) -> str:
+    """여러 줄의 📌 근거를 같은 규약끼리 한 줄로 합친다.
+    예: 📌 관리규약 제3조 / 📌 관리규약 제18조 → 📌 관리규약 제3조, 제18조
+    """
+    lines = text.split("\n")
+    body_lines = []
+    citation_lines = []
+
+    for line in lines:
+        if line.strip().startswith("📌"):
+            citation_lines.append(line.strip())
+        else:
+            body_lines.append(line)
+
+    if not citation_lines:
+        return text
+
+    # 규약별로 그룹핑
+    from collections import OrderedDict
+    groups: OrderedDict[str, list[str]] = OrderedDict()
+    for cl in citation_lines:
+        raw = cl.lstrip("📌").strip()
+        # "관리규약 제3조" → doc="관리규약", detail="제3조"
+        m = re.match(r"(관리규약|주차규약|커뮤니티센터\s*규약|생활안내)\s*(.*)", raw)
+        if m:
+            doc = m.group(1).strip()
+            detail = m.group(2).strip()
+            if doc not in groups:
+                groups[doc] = []
+            if detail and detail not in groups[doc]:
+                groups[doc].append(detail)
+        else:
+            if raw not in groups:
+                groups[raw] = []
+
+    # 한 줄씩 합치기
+    merged = []
+    for doc, details in groups.items():
+        if details:
+            merged.append(f"📌 {doc} {', '.join(details)}")
+        else:
+            merged.append(f"📌 {doc}")
+
+    # body 끝의 빈 줄 정리 후 근거 붙이기
+    body = "\n".join(body_lines).rstrip()
+    return body + "\n\n" + "\n".join(merged)
+
+# ─────────────────────────────────────────
 # 10. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
@@ -724,6 +774,7 @@ with tab_ai:
 
                     response_text = ai_generate(full_prompt)
                     response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
+                    response_text = _collapse_citations(response_text)
 
                     st.markdown(response_text)
 
