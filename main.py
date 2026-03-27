@@ -667,6 +667,9 @@ with tab_ai:
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state.selected_doc = doc
+                st.session_state.ai_question = None
+                st.session_state.ai_response = None
+                st.session_state.ai_articles = []
                 st.rerun()
 
     selected = st.session_state.selected_doc
