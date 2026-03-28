@@ -74,11 +74,6 @@ st.markdown("""
 [class*="profilePreview"] { display: none !important; }
 [class*="_link_gzau3"] { display: none !important; }
 [class*="viewerBadge"] { display: none !important; }
-[data-testid="stStatusWidget"] { display: none !important; }
-footer { display: none !important; }
-.stDeployButton { display: none !important; }
-[class*="stBottomBlockContainer"] [class*="badge"] { display: none !important; }
-a[href*="streamlit.io"] { display: none !important; }
 
 #MainMenu { display: none !important; }
 [data-testid="stMainMenu"] { display: none !important; }
