@@ -173,7 +173,7 @@ TEXT_FILES = {
 }
 
 # 압축 적용 대상 (전문이 긴 규약)
-COMPRESSION_TARGET_DOCS = {"관리규약", "주차규약", "커뮤니티센터 규약"}
+COMPRESSION_TARGET_DOCS = {"관리규약"}
 
 pdf_texts: dict[str, str] = {}
 
