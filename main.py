@@ -319,6 +319,31 @@ def ai_generate_stream(prompt: str) -> Iterator[str]:
         return
     raise RuntimeError(f"API {last_status} 오류 (3회 재시도 실패): {last_err}")
 
+def ai_generate_smart_stream(prompt: str) -> Iterator[str]:
+    """스트리밍을 시도하고, 실패하거나 토큰이 하나도 안 오면 non-stream으로 자동 폴백."""
+    stream_err: Exception | None = None
+    any_yielded = False
+    try:
+        for chunk in ai_generate_stream(prompt):
+            if chunk:
+                any_yielded = True
+                yield chunk
+    except Exception as e:
+        stream_err = e
+
+    if any_yielded:
+        return
+
+    # 스트리밍 실패 또는 0 토큰 → non-stream 폴백
+    try:
+        text = ai_generate(prompt)
+    except Exception:
+        if stream_err is not None:
+            raise stream_err
+        raise
+    if text:
+        yield text
+
 def friendly_error_message(exc: Exception) -> str:
     msg = str(exc)
     if "429" in msg:
@@ -900,7 +925,14 @@ with tab_ai:
                 for art in m["articles"]:
                     render_article_card(art)
 
-    # 기존 대화 이력 렌더 (최신 assistant에만 카드 expander)
+    # 입력창은 항상 상단 고정 (질문 제출 시 prompt에 값 전달)
+    prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
+
+    # 새 질문이면 사용자 메시지를 먼저 이력에 추가 → 아래 이력 루프에서 자연스럽게 렌더
+    if prompt:
+        msgs.append({"role": "user", "text": prompt})
+
+    # 대화 이력 렌더 (최신 assistant에만 카드 expander, 과거는 본문/근거만)
     last_assistant_idx = -1
     for i, m in enumerate(msgs):
         if m["role"] == "assistant":
@@ -912,13 +944,8 @@ with tab_ai:
             else:
                 _render_assistant_message(m, is_latest=(i == last_assistant_idx))
 
-    # 새 질문 입력
-    if prompt := st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요")):
-        # 사용자 메시지 추가 및 렌더
-        msgs.append({"role": "user", "text": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
+    # 새 질문이면 assistant 응답을 하단에 스트리밍 렌더
+    if prompt:
         with st.chat_message("assistant"):
             try:
                 all_arts = get_articles(selected, pdf_texts[selected])
@@ -938,20 +965,23 @@ with tab_ai:
                 else:
                     placeholder = st.empty()
                     accumulated = ""
-                    for chunk in ai_generate_stream(full_prompt):
+                    for chunk in ai_generate_smart_stream(full_prompt):
                         accumulated += chunk
                         placeholder.markdown(accumulated + " ▌")
+
+                    if not accumulated.strip():
+                        raise RuntimeError("빈 응답")
 
                     response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
                     response_text = _collapse_citations(response_text)
 
                     # 스트리밍 종료 후 최종 포맷으로 교체 렌더
                     body, cites = split_body_and_citations(response_text)
-                    final_html_parts = ["\n".join(body).rstrip()]
+                    final_parts = ["\n".join(body).rstrip()]
                     if cites:
-                        final_html_parts.append("")
-                        final_html_parts.append("\n".join(cites))
-                    placeholder.markdown("\n\n".join(final_html_parts))
+                        final_parts.append("")
+                        final_parts.append("\n".join(cites))
+                    placeholder.markdown("\n\n".join(final_parts))
 
                     st.session_state.ai_cache[cache_key] = response_text
 
