@@ -203,13 +203,17 @@ if "selected_doc" not in st.session_state or st.session_state.selected_doc not i
 # 5. Gemini AI
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
-    api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model   = st.session_state.get("ai_model", "gemini-2.5-flash")
-    url     = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    api_key  = st.session_state.get("GOOGLE_API_KEY", "")
+    model    = "gemini-2.5-flash"
+    fast     = st.session_state.get("ai_fast_mode", False)
+    url      = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers  = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    gen_cfg: dict = {"maxOutputTokens": 8192}
+    if fast:
+        gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 8192},
+        "generationConfig": gen_cfg,
     }
     last_err = ""
     last_status = 0
@@ -247,17 +251,21 @@ def ai_generate_stream(prompt: str) -> Iterator[str]:
     """Gemini SSE 스트리밍. 토큰 조각을 순차적으로 yield.
     429/5xx는 연결 수립 전까지 최대 3회 재시도. MAX_TOKENS이면 이어쓰기 1회 수행.
     """
-    api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model   = st.session_state.get("ai_model", "gemini-2.5-flash")
+    api_key  = st.session_state.get("GOOGLE_API_KEY", "")
+    model    = "gemini-2.5-flash"
+    fast     = st.session_state.get("ai_fast_mode", False)
     stream_url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:streamGenerateContent?alt=sse"
     )
     cont_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    gen_cfg: dict = {"maxOutputTokens": 8192}
+    if fast:
+        gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 8192},
+        "generationConfig": gen_cfg,
     }
     last_err = ""
     last_status = 0
@@ -840,18 +848,22 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 모델 선택
-    _MODELS = {"⚡ 빠름 (2.0-flash)": "gemini-2.0-flash", "🎯 정확 (2.5-flash)": "gemini-2.5-flash"}
-    if "ai_model" not in st.session_state:
-        st.session_state["ai_model"] = "gemini-2.5-flash"
+    # 속도/정확도 모드 선택
+    if "ai_fast_mode" not in st.session_state:
+        st.session_state["ai_fast_mode"] = False
     m_col1, m_col2 = st.columns(2)
-    for col, (label, mval) in zip([m_col1, m_col2], _MODELS.items()):
-        with col:
-            if st.button(label, key=f"model_{mval}", use_container_width=True,
-                         type="primary" if st.session_state["ai_model"] == mval else "secondary"):
-                st.session_state["ai_model"] = mval
-                st.session_state.ai_cache = {}  # 모델 바뀌면 캐시 초기화
-                st.rerun()
+    with m_col1:
+        if st.button("⚡ 빠름", key="mode_fast", use_container_width=True,
+                     type="primary" if st.session_state["ai_fast_mode"] else "secondary"):
+            st.session_state["ai_fast_mode"] = True
+            st.session_state.ai_cache = {}
+            st.rerun()
+    with m_col2:
+        if st.button("🎯 정확", key="mode_acc", use_container_width=True,
+                     type="primary" if not st.session_state["ai_fast_mode"] else "secondary"):
+            st.session_state["ai_fast_mode"] = False
+            st.session_state.ai_cache = {}
+            st.rerun()
 
     # 문서 선택 버튼
     ai_cols = st.columns(len(DOC_ORDER))
