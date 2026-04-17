@@ -204,7 +204,7 @@ if "selected_doc" not in st.session_state or st.session_state.selected_doc not i
 # ─────────────────────────────────────────
 def ai_generate(prompt: str) -> str:
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model   = "gemini-2.5-flash"
+    model   = st.session_state.get("ai_model", "gemini-2.5-flash")
     url     = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
@@ -248,7 +248,7 @@ def ai_generate_stream(prompt: str) -> Iterator[str]:
     429/5xx는 연결 수립 전까지 최대 3회 재시도. MAX_TOKENS이면 이어쓰기 1회 수행.
     """
     api_key = st.session_state.get("GOOGLE_API_KEY", "")
-    model   = "gemini-2.5-flash"
+    model   = st.session_state.get("ai_model", "gemini-2.5-flash")
     stream_url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:streamGenerateContent?alt=sse"
@@ -840,6 +840,19 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
+    # 모델 선택
+    _MODELS = {"⚡ 빠름 (2.0-flash)": "gemini-2.0-flash", "🎯 정확 (2.5-flash)": "gemini-2.5-flash"}
+    if "ai_model" not in st.session_state:
+        st.session_state["ai_model"] = "gemini-2.5-flash"
+    m_col1, m_col2 = st.columns(2)
+    for col, (label, mval) in zip([m_col1, m_col2], _MODELS.items()):
+        with col:
+            if st.button(label, key=f"model_{mval}", use_container_width=True,
+                         type="primary" if st.session_state["ai_model"] == mval else "secondary"):
+                st.session_state["ai_model"] = mval
+                st.session_state.ai_cache = {}  # 모델 바뀌면 캐시 초기화
+                st.rerun()
+
     # 문서 선택 버튼
     ai_cols = st.columns(len(DOC_ORDER))
     for i, doc in enumerate(DOC_ORDER):
@@ -938,41 +951,60 @@ with tab_ai:
         related: list[dict] = []
         last_err = ""
 
-        with st.chat_message("assistant"):
-            placeholder = st.empty()
-            placeholder.markdown("_답변을 생성하는 중입니다..._")
-            try:
-                all_arts = get_articles(selected, pdf_texts[selected])
-                context  = get_context_for_ai(selected, prompt, all_arts)
-                full_p   = build_prompt(selected, context, prompt)
-                cache_key = (selected, prompt.strip())
-                cached = st.session_state.ai_cache.get(cache_key)
+        # 컨테이너를 미리 확보: 새 답변(위) → 이전 이력(아래) 순서 고정
+        asst_container = st.container()
+        hist_container = st.container()
 
-                if cached is not None:
-                    response_text = cached
-                else:
-                    accumulated = ""
-                    for chunk in ai_generate_smart_stream(full_p):
-                        accumulated += chunk
-                        placeholder.markdown(accumulated + " ▌")
-                    if not accumulated.strip():
-                        raise RuntimeError("빈 응답")
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
-                    response_text = _collapse_citations(response_text)
-                    st.session_state.ai_cache[cache_key] = response_text
+        # 이전 이력을 즉시 렌더 (스트리밍 중에도 사라지지 않음)
+        old_pairs = [
+            (msgs[i], msgs[i + 1])
+            for i in range(0, len(msgs) - 1, 2)
+            if i + 1 < len(msgs)
+        ]
+        with hist_container:
+            for user_m, asst_m in reversed(old_pairs):
+                with st.chat_message("user"):
+                    st.markdown(user_m["text"])
+                with st.chat_message("assistant"):
+                    _render_assistant_message(asst_m, is_latest=False)
 
-                body, cites = split_body_and_citations(response_text)
-                final = "\n".join(body).rstrip()
-                if cites:
-                    final += "\n\n" + "\n".join(cites)
-                placeholder.markdown(final)
+        # 새 답변 스트리밍
+        with asst_container:
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+                placeholder.markdown("_답변을 생성하는 중입니다..._")
+                try:
+                    all_arts = get_articles(selected, pdf_texts[selected])
+                    context  = get_context_for_ai(selected, prompt, all_arts)
+                    full_p   = build_prompt(selected, context, prompt)
+                    cache_key = (selected, prompt.strip())
+                    cached = st.session_state.ai_cache.get(cache_key)
 
-                related = [] if selected == "생활안내" else find_related_articles(
-                    response_text, all_arts, selected
-                )
-            except Exception as e:
-                last_err = friendly_error_message(e)
-                placeholder.markdown(last_err)
+                    if cached is not None:
+                        response_text = cached
+                    else:
+                        accumulated = ""
+                        for chunk in ai_generate_smart_stream(full_p):
+                            accumulated += chunk
+                            placeholder.markdown(accumulated + " ▌")
+                        if not accumulated.strip():
+                            raise RuntimeError("빈 응답")
+                        response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
+                        response_text = _collapse_citations(response_text)
+                        st.session_state.ai_cache[cache_key] = response_text
+
+                    body, cites = split_body_and_citations(response_text)
+                    final = "\n".join(body).rstrip()
+                    if cites:
+                        final += "\n\n" + "\n".join(cites)
+                    placeholder.markdown(final)
+
+                    related = [] if selected == "생활안내" else find_related_articles(
+                        response_text, all_arts, selected
+                    )
+                except Exception as e:
+                    last_err = friendly_error_message(e)
+                    placeholder.markdown(last_err)
 
         if response_text:
             msgs.append({"role": "user", "text": prompt})
