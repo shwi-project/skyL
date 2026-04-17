@@ -929,75 +929,69 @@ with tab_ai:
     # 입력창 상단 고정
     prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
 
-    def _ask(question: str) -> None:
-        """질문을 스트리밍하고 msgs에 저장."""
-        all_arts = get_articles(selected, pdf_texts[selected])
-        context  = get_context_for_ai(selected, question, all_arts)
-        full_p   = build_prompt(selected, context, question)
-        cache_key = (selected, question.strip())
-        cached = st.session_state.ai_cache.get(cache_key)
-
-        if cached is not None:
-            response_text = cached
-            body, cites = split_body_and_citations(response_text)
-            st.markdown("\n".join(body).rstrip())
-            if cites:
-                st.markdown("")
-                st.markdown("\n".join(cites))
-        else:
-            placeholder = st.empty()
-            placeholder.markdown("_답변을 생성하는 중입니다..._")
-            accumulated = ""
-            for chunk in ai_generate_smart_stream(full_p):
-                accumulated += chunk
-                placeholder.markdown(accumulated + " ▌")
-            if not accumulated.strip():
-                raise RuntimeError("빈 응답")
-            response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
-            response_text = _collapse_citations(response_text)
-            st.session_state.ai_cache[cache_key] = response_text
-            body, cites = split_body_and_citations(response_text)
-            final = "\n".join(body).rstrip()
-            if cites:
-                final += "\n\n" + "\n".join(cites)
-            placeholder.markdown(final)
-
-        related = [] if selected == "생활안내" else find_related_articles(
-            response_text, all_arts, selected
-        )
-        if related:
-            with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                for art in related:
-                    render_article_card(art)
-
-        msgs.append({"role": "user", "text": question})
-        msgs.append({"role": "assistant", "text": response_text, "articles": related})
-
-    def _render_history(history: list[dict], latest_is_first: bool = False) -> None:
-        """history를 (user, asst) 쌍으로 역순 렌더. latest_is_first=True면 첫 쌍에 expander 표시."""
-        pairs = [
-            (history[i], history[i + 1])
-            for i in range(0, len(history) - 1, 2)
-            if i + 1 < len(history)
-        ]
-        for idx, (u, a) in enumerate(reversed(pairs)):
-            with st.chat_message("user"):
-                st.markdown(u["text"])
-            with st.chat_message("assistant"):
-                _render_assistant_message(a, is_latest=(latest_is_first and idx == 0))
-
-    # ── 새 질문: 최상단에 렌더 → 이전 이력을 역순으로 아래에 ──
     if prompt:
-        old_count = len(msgs)
+        # 스트리밍 중엔 현재 Q&A만 표시 (이력 렌더 없음 → DOM 충돌 방지)
         with st.chat_message("user"):
             st.markdown(prompt)
+
+        response_text = None
+        related: list[dict] = []
+        last_err = ""
+
         with st.chat_message("assistant"):
+            placeholder = st.empty()
+            placeholder.markdown("_답변을 생성하는 중입니다..._")
             try:
-                _ask(prompt)
+                all_arts = get_articles(selected, pdf_texts[selected])
+                context  = get_context_for_ai(selected, prompt, all_arts)
+                full_p   = build_prompt(selected, context, prompt)
+                cache_key = (selected, prompt.strip())
+                cached = st.session_state.ai_cache.get(cache_key)
+
+                if cached is not None:
+                    response_text = cached
+                else:
+                    accumulated = ""
+                    for chunk in ai_generate_smart_stream(full_p):
+                        accumulated += chunk
+                        placeholder.markdown(accumulated + " ▌")
+                    if not accumulated.strip():
+                        raise RuntimeError("빈 응답")
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
+                    response_text = _collapse_citations(response_text)
+                    st.session_state.ai_cache[cache_key] = response_text
+
+                body, cites = split_body_and_citations(response_text)
+                final = "\n".join(body).rstrip()
+                if cites:
+                    final += "\n\n" + "\n".join(cites)
+                placeholder.markdown(final)
+
+                related = [] if selected == "생활안내" else find_related_articles(
+                    response_text, all_arts, selected
+                )
             except Exception as e:
-                st.error(friendly_error_message(e))
-        _render_history(msgs[:old_count], latest_is_first=False)
+                last_err = friendly_error_message(e)
+                placeholder.markdown(last_err)
+
+        if response_text:
+            msgs.append({"role": "user", "text": prompt})
+            msgs.append({"role": "assistant", "text": response_text, "articles": related})
+        elif last_err:
+            msgs.append({"role": "user", "text": prompt})
+            msgs.append({"role": "assistant", "text": last_err, "articles": [], "error": True})
+
+        st.rerun()
 
     else:
-        # 이력만 있을 때: 최신 Q&A가 맨 위
-        _render_history(msgs, latest_is_first=True)
+        # 이력 전체를 최신순(역순 쌍)으로 렌더
+        pairs = [
+            (msgs[i], msgs[i + 1])
+            for i in range(0, len(msgs) - 1, 2)
+            if i + 1 < len(msgs)
+        ]
+        for idx, (user_m, asst_m) in enumerate(reversed(pairs)):
+            with st.chat_message("user"):
+                st.markdown(user_m["text"])
+            with st.chat_message("assistant"):
+                _render_assistant_message(asst_m, is_latest=(idx == 0))
