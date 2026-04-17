@@ -210,11 +210,18 @@ def ai_generate(prompt: str) -> str:
         "generationConfig": {"maxOutputTokens": 8192},
     }
     last_err = ""
+    last_status = 0
     for attempt in range(3):
         resp = requests.post(url, headers=headers, json=payload, timeout=120)
         if resp.status_code == 429:
             last_err = resp.text
+            last_status = 429
             time.sleep((attempt + 1) * 15)
+            continue
+        if resp.status_code in (500, 502, 503, 504):
+            last_err = resp.text
+            last_status = resp.status_code
+            time.sleep((attempt + 1) * 5)
             continue
         if not resp.ok:
             raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
@@ -232,7 +239,7 @@ def ai_generate(prompt: str) -> str:
             if cont.ok:
                 text += cont.json()["candidates"][0]["content"]["parts"][0]["text"]
         return text
-    raise RuntimeError(f"429 한도 초과: {last_err}")
+    raise RuntimeError(f"API {last_status} 오류 (3회 재시도 실패): {last_err}")
 
 # ─────────────────────────────────────────
 # 6. 조항 파싱 (규약 PDF용)
