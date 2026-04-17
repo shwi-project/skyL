@@ -119,7 +119,7 @@ st.markdown(
 # ⚙️ 컨텍스트 압축 설정
 # ─────────────────────────────────────────
 USE_CONTEXT_COMPRESSION = True
-MAX_ARTICLES_IN_CONTEXT = 40
+MAX_ARTICLES_IN_CONTEXT = 20
 
 # ─────────────────────────────────────────
 # 1. API 키
@@ -173,7 +173,7 @@ TEXT_FILES = {
 }
 
 # 압축 적용 대상 (전문이 긴 규약)
-COMPRESSION_TARGET_DOCS = {"관리규약"}
+COMPRESSION_TARGET_DOCS = {"관리규약", "주차규약", "커뮤니티센터 규약"}
 
 pdf_texts: dict[str, str] = {}
 
@@ -926,81 +926,78 @@ with tab_ai:
                 for art in m["articles"]:
                     render_article_card(art)
 
-    # 입력창은 항상 상단 고정 (질문 제출 시 prompt에 값 전달)
+    # 입력창 상단 고정
     prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
 
-    # 새 질문이면 사용자 메시지를 먼저 이력에 추가 → 아래 이력 루프에서 자연스럽게 렌더
-    if prompt:
-        msgs.append({"role": "user", "text": prompt})
+    def _ask(question: str) -> None:
+        """질문을 스트리밍하고 msgs에 저장."""
+        all_arts = get_articles(selected, pdf_texts[selected])
+        context  = get_context_for_ai(selected, question, all_arts)
+        full_p   = build_prompt(selected, context, question)
+        cache_key = (selected, question.strip())
+        cached = st.session_state.ai_cache.get(cache_key)
 
-    # 대화 이력 렌더 (최신 assistant에만 카드 expander, 과거는 본문/근거만)
-    last_assistant_idx = -1
-    for i, m in enumerate(msgs):
-        if m["role"] == "assistant":
-            last_assistant_idx = i
-    for i, m in enumerate(msgs):
-        with st.chat_message(m["role"]):
-            if m["role"] == "user":
-                st.markdown(m["text"])
-            else:
-                _render_assistant_message(m, is_latest=(i == last_assistant_idx))
+        if cached is not None:
+            response_text = cached
+            body, cites = split_body_and_citations(response_text)
+            st.markdown("\n".join(body).rstrip())
+            if cites:
+                st.markdown("")
+                st.markdown("\n".join(cites))
+        else:
+            placeholder = st.empty()
+            placeholder.markdown("_답변을 생성하는 중입니다..._")
+            accumulated = ""
+            for chunk in ai_generate_smart_stream(full_p):
+                accumulated += chunk
+                placeholder.markdown(accumulated + " ▌")
+            if not accumulated.strip():
+                raise RuntimeError("빈 응답")
+            response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
+            response_text = _collapse_citations(response_text)
+            st.session_state.ai_cache[cache_key] = response_text
+            body, cites = split_body_and_citations(response_text)
+            final = "\n".join(body).rstrip()
+            if cites:
+                final += "\n\n" + "\n".join(cites)
+            placeholder.markdown(final)
 
-    # 새 질문이면 assistant 응답을 하단에 스트리밍 렌더
+        related = [] if selected == "생활안내" else find_related_articles(
+            response_text, all_arts, selected
+        )
+        if related:
+            with st.expander("📋 관련 내용 원문 보기", expanded=False):
+                for art in related:
+                    render_article_card(art)
+
+        msgs.append({"role": "user", "text": question})
+        msgs.append({"role": "assistant", "text": response_text, "articles": related})
+
+    def _render_history(history: list[dict], latest_is_first: bool = False) -> None:
+        """history를 (user, asst) 쌍으로 역순 렌더. latest_is_first=True면 첫 쌍에 expander 표시."""
+        pairs = [
+            (history[i], history[i + 1])
+            for i in range(0, len(history) - 1, 2)
+            if i + 1 < len(history)
+        ]
+        for idx, (u, a) in enumerate(reversed(pairs)):
+            with st.chat_message("user"):
+                st.markdown(u["text"])
+            with st.chat_message("assistant"):
+                _render_assistant_message(a, is_latest=(latest_is_first and idx == 0))
+
+    # ── 새 질문: 최상단에 렌더 → 이전 이력을 역순으로 아래에 ──
     if prompt:
+        old_count = len(msgs)
+        with st.chat_message("user"):
+            st.markdown(prompt)
         with st.chat_message("assistant"):
             try:
-                all_arts = get_articles(selected, pdf_texts[selected])
-                context  = get_context_for_ai(selected, prompt, all_arts)
-                full_prompt = build_prompt(selected, context, prompt)
-
-                cache_key = (selected, prompt.strip())
-                cached = st.session_state.ai_cache.get(cache_key)
-
-                if cached is not None:
-                    response_text = cached
-                    body, cites = split_body_and_citations(response_text)
-                    st.markdown("\n".join(body).rstrip())
-                    if cites:
-                        st.markdown("")
-                        st.markdown("\n".join(cites))
-                else:
-                    placeholder = st.empty()
-                    placeholder.markdown("_답변을 생성하는 중입니다..._")
-                    accumulated = ""
-                    for chunk in ai_generate_smart_stream(full_prompt):
-                        accumulated += chunk
-                        placeholder.markdown(accumulated + " ▌")
-                    if not accumulated.strip():
-                        raise RuntimeError("빈 응답")
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
-                    response_text = _collapse_citations(response_text)
-                    st.session_state.ai_cache[cache_key] = response_text
-                    body, cites = split_body_and_citations(response_text)
-                    final = "\n".join(body).rstrip()
-                    if cites:
-                        final += "\n\n" + "\n".join(cites)
-                    placeholder.markdown(final)
-
-                related = [] if selected == "생활안내" else find_related_articles(
-                    response_text, all_arts, selected
-                )
-                if related:
-                    with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                        for art in related:
-                            render_article_card(art)
-
-                msgs.append({
-                    "role": "assistant",
-                    "text": response_text,
-                    "articles": related,
-                })
-
+                _ask(prompt)
             except Exception as e:
-                err_msg = friendly_error_message(e)
-                st.error(err_msg)
-                msgs.append({
-                    "role": "assistant",
-                    "text": err_msg,
-                    "articles": [],
-                    "error": True,
-                })
+                st.error(friendly_error_message(e))
+        _render_history(msgs[:old_count], latest_is_first=False)
+
+    else:
+        # 이력만 있을 때: 최신 Q&A가 맨 위
+        _render_history(msgs, latest_is_first=True)
