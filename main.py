@@ -965,8 +965,9 @@ with tab_ai:
                         st.markdown("\n".join(cites))
                 else:
                     placeholder = st.empty()
+                    placeholder.markdown("_답변을 생성하는 중입니다..._")
                     accumulated = ""
-                    for chunk in ai_generate_stream(full_prompt):
+                    for chunk in ai_generate_smart_stream(full_prompt):
                         accumulated += chunk
                         placeholder.markdown(accumulated + " ▌")
                     if not accumulated.strip():
