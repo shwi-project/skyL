@@ -957,33 +957,20 @@ with tab_ai:
 
                 if cached is not None:
                     response_text = cached
-                    body, cites = split_body_and_citations(response_text)
-                    st.markdown("\n".join(body).rstrip())
-                    if cites:
-                        st.markdown("")
-                        st.markdown("\n".join(cites))
                 else:
-                    placeholder = st.empty()
-                    accumulated = ""
-                    for chunk in ai_generate_smart_stream(full_prompt):
-                        accumulated += chunk
-                        placeholder.markdown(accumulated + " ▌")
-
-                    if not accumulated.strip():
+                    with st.spinner("AI가 답변을 생성하는 중..."):
+                        raw = ai_generate(full_prompt)
+                    if not raw or not raw.strip():
                         raise RuntimeError("빈 응답")
-
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", raw)
                     response_text = _collapse_citations(response_text)
-
-                    # 스트리밍 종료 후 최종 포맷으로 교체 렌더
-                    body, cites = split_body_and_citations(response_text)
-                    final_parts = ["\n".join(body).rstrip()]
-                    if cites:
-                        final_parts.append("")
-                        final_parts.append("\n".join(cites))
-                    placeholder.markdown("\n\n".join(final_parts))
-
                     st.session_state.ai_cache[cache_key] = response_text
+
+                body, cites = split_body_and_citations(response_text)
+                st.markdown("\n".join(body).rstrip())
+                if cites:
+                    st.markdown("")
+                    st.markdown("\n".join(cites))
 
                 related = [] if selected == "생활안내" else find_related_articles(
                     response_text, all_arts, selected
