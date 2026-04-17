@@ -1,7 +1,9 @@
 import base64
+import json
 import os
 import re
 import time
+from typing import Iterator
 
 import pdfplumber
 import requests
@@ -240,6 +242,100 @@ def ai_generate(prompt: str) -> str:
                 text += cont.json()["candidates"][0]["content"]["parts"][0]["text"]
         return text
     raise RuntimeError(f"API {last_status} 오류 (3회 재시도 실패): {last_err}")
+
+def ai_generate_stream(prompt: str) -> Iterator[str]:
+    """Gemini SSE 스트리밍. 토큰 조각을 순차적으로 yield.
+    429/5xx는 연결 수립 전까지 최대 3회 재시도. MAX_TOKENS이면 이어쓰기 1회 수행.
+    """
+    api_key = st.session_state.get("GOOGLE_API_KEY", "")
+    model   = "gemini-2.5-flash"
+    stream_url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:streamGenerateContent?alt=sse"
+    )
+    cont_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": 8192},
+    }
+    last_err = ""
+    last_status = 0
+    for attempt in range(3):
+        resp = requests.post(stream_url, headers=headers, json=payload, timeout=120, stream=True)
+        if resp.status_code == 429:
+            last_err = resp.text
+            last_status = 429
+            time.sleep((attempt + 1) * 15)
+            continue
+        if resp.status_code in (500, 502, 503, 504):
+            last_err = resp.text
+            last_status = resp.status_code
+            time.sleep((attempt + 1) * 5)
+            continue
+        if not resp.ok:
+            raise RuntimeError(f"API 오류 {resp.status_code}: {resp.text}")
+
+        accumulated = ""
+        last_finish = None
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if not data or data == "[DONE]":
+                continue
+            try:
+                obj = json.loads(data)
+            except Exception:
+                continue
+            cands = obj.get("candidates") or []
+            if not cands:
+                continue
+            cand = cands[0]
+            for p in cand.get("content", {}).get("parts", []) or []:
+                t = p.get("text")
+                if t:
+                    accumulated += t
+                    yield t
+            if "finishReason" in cand:
+                last_finish = cand["finishReason"]
+
+        if last_finish == "MAX_TOKENS" and accumulated:
+            try:
+                cont = requests.post(cont_url, headers=headers, json={
+                    "contents": [
+                        {"role": "user",  "parts": [{"text": prompt}]},
+                        {"role": "model", "parts": [{"text": accumulated}]},
+                        {"role": "user",  "parts": [{"text": "이어서 계속 작성해줘."}]},
+                    ],
+                    "generationConfig": {"maxOutputTokens": 8192},
+                }, timeout=120)
+                if cont.ok:
+                    tail = cont.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    if tail:
+                        yield tail
+            except Exception:
+                pass
+        return
+    raise RuntimeError(f"API {last_status} 오류 (3회 재시도 실패): {last_err}")
+
+def friendly_error_message(exc: Exception) -> str:
+    msg = str(exc)
+    if "429" in msg:
+        return "⏳ 잠시 요청이 많습니다. 10~20초 후 다시 시도해 주세요."
+    if any(code in msg for code in ("500", "502", "503", "504")):
+        return "🔧 AI 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요."
+    if "timeout" in msg.lower() or "timed out" in msg.lower():
+        return "⏱️ 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요."
+    if "ConnectionError" in msg or "ConnectTimeout" in msg:
+        return "🌐 네트워크 연결에 문제가 있습니다. 잠시 후 다시 시도해 주세요."
+    return "⚠️ 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+
+def split_body_and_citations(text: str) -> tuple[list[str], list[str]]:
+    body, cites = [], []
+    for line in text.split("\n"):
+        (cites if line.strip().startswith("📌") else body).append(line)
+    return body, cites
 
 # ─────────────────────────────────────────
 # 6. 조항 파싱 (규약 PDF용)
@@ -683,7 +779,9 @@ with tab_keyword:
             if syn_key in keyword and syn_val.lower() not in search_terms:
                 search_terms.append(syn_val.lower())
 
+        PER_DOC_LIMIT = 50
         matched: list[dict] = []
+        total_found = 0
         for doc_name in keyword_docs:
             arts = get_articles(doc_name, pdf_texts[doc_name])
             doc_matched = []
@@ -694,12 +792,16 @@ with tab_keyword:
                     doc_matched.append(a)
                 elif any(t in content_l for t in search_terms):
                     doc_matched.append(a)
-            matched.extend(doc_matched[:20])
+            total_found += len(doc_matched)
+            matched.extend(doc_matched[:PER_DOC_LIMIT])
 
         if not matched:
             st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
         else:
-            st.success(f"총 **{len(matched)}개** 조항 발견")
+            if total_found > len(matched):
+                st.success(f"총 **{total_found}개** 중 상위 **{len(matched)}개** 조항 표시")
+            else:
+                st.success(f"총 **{len(matched)}개** 조항 발견")
             st.divider()
             for art in matched:
                 render_article_card(art, highlights=search_terms)
@@ -712,6 +814,7 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
+    # 문서 선택 버튼
     ai_cols = st.columns(len(DOC_ORDER))
     for i, doc in enumerate(DOC_ORDER):
         with ai_cols[i]:
@@ -723,16 +826,28 @@ with tab_ai:
                 type="primary" if is_active else "secondary",
             ):
                 st.session_state.selected_doc = doc
-                st.session_state.ai_question = None
-                st.session_state.ai_response = None
-                st.session_state.ai_articles = []
                 st.rerun()
 
     selected = st.session_state.selected_doc
 
-    for k in ("ai_question", "ai_response", "ai_articles"):
-        if k not in st.session_state:
-            st.session_state[k] = None if k != "ai_articles" else []
+    # 문서별 독립 대화 이력
+    if "messages_by_doc" not in st.session_state:
+        st.session_state.messages_by_doc = {}
+    if selected not in st.session_state.messages_by_doc:
+        st.session_state.messages_by_doc[selected] = []
+    msgs: list[dict] = st.session_state.messages_by_doc[selected]
+
+    # 세션 스코프 응답 캐시 (같은 문서+질문 재호출 시 즉시 반환)
+    if "ai_cache" not in st.session_state:
+        st.session_state.ai_cache = {}
+
+    # 대화 초기화 버튼 (이력 있을 때만 노출)
+    if msgs:
+        clear_col, _ = st.columns([1, 6])
+        with clear_col:
+            if st.button("🗑️ 대화 초기화", key=f"clear_{selected}", use_container_width=True):
+                st.session_state.messages_by_doc[selected] = []
+                st.rerun()
 
     # 문서별 시스템 프롬프트 분기
     def build_prompt(doc_name: str, context: str, question: str) -> str:
@@ -769,64 +884,97 @@ with tab_ai:
         "관리규약": "예: 동대표 자격요건이 뭐야?",
         "생활안내": "예: 쓰레기 분리수거는 어떻게 해?",
     }
+
+    def _render_assistant_message(m: dict, is_latest: bool) -> None:
+        """과거 메시지: 본문/근거만. 최신 메시지: 본문/근거 + 카드 expander."""
+        if m.get("error"):
+            st.error(m["text"])
+            return
+        body, cites = split_body_and_citations(m["text"])
+        st.markdown("\n".join(body).rstrip())
+        if cites:
+            st.markdown("")
+            st.markdown("\n".join(cites))
+        if is_latest and m.get("articles"):
+            with st.expander("📋 관련 내용 원문 보기", expanded=False):
+                for art in m["articles"]:
+                    render_article_card(art)
+
+    # 기존 대화 이력 렌더 (최신 assistant에만 카드 expander)
+    last_assistant_idx = -1
+    for i, m in enumerate(msgs):
+        if m["role"] == "assistant":
+            last_assistant_idx = i
+    for i, m in enumerate(msgs):
+        with st.chat_message(m["role"]):
+            if m["role"] == "user":
+                st.markdown(m["text"])
+            else:
+                _render_assistant_message(m, is_latest=(i == last_assistant_idx))
+
+    # 새 질문 입력
     if prompt := st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요")):
+        # 사용자 메시지 추가 및 렌더
+        msgs.append({"role": "user", "text": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
-        with st.chat_message("assistant"):
-            with st.spinner("AI가 답변을 생성하는 중..."):
-                try:
-                    all_arts = get_articles(selected, pdf_texts[selected])
-                    context  = get_context_for_ai(selected, prompt, all_arts)
-                    full_prompt = build_prompt(selected, context, prompt)
 
-                    response_text = ai_generate(full_prompt)
-                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", response_text)
+        with st.chat_message("assistant"):
+            try:
+                all_arts = get_articles(selected, pdf_texts[selected])
+                context  = get_context_for_ai(selected, prompt, all_arts)
+                full_prompt = build_prompt(selected, context, prompt)
+
+                cache_key = (selected, prompt.strip())
+                cached = st.session_state.ai_cache.get(cache_key)
+
+                if cached is not None:
+                    response_text = cached
+                    body, cites = split_body_and_citations(response_text)
+                    st.markdown("\n".join(body).rstrip())
+                    if cites:
+                        st.markdown("")
+                        st.markdown("\n".join(cites))
+                else:
+                    placeholder = st.empty()
+                    accumulated = ""
+                    for chunk in ai_generate_stream(full_prompt):
+                        accumulated += chunk
+                        placeholder.markdown(accumulated + " ▌")
+
+                    response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
                     response_text = _collapse_citations(response_text)
 
-                    # 본문과 📌 근거를 분리하여 여백 확보
-                    _lines = response_text.split("\n")
-                    _body = []
-                    _cites = []
-                    for _l in _lines:
-                        if _l.strip().startswith("📌"):
-                            _cites.append(_l)
-                        else:
-                            _body.append(_l)
-                    st.markdown("\n".join(_body).rstrip())
-                    if _cites:
-                        st.markdown("")  # 여백
-                        st.markdown("\n".join(_cites))
+                    # 스트리밍 종료 후 최종 포맷으로 교체 렌더
+                    body, cites = split_body_and_citations(response_text)
+                    final_html_parts = ["\n".join(body).rstrip()]
+                    if cites:
+                        final_html_parts.append("")
+                        final_html_parts.append("\n".join(cites))
+                    placeholder.markdown("\n\n".join(final_html_parts))
 
-                    related = [] if selected == "생활안내" else find_related_articles(response_text, all_arts, selected)
-                    if related:
-                        with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                            for art in related:
-                                render_article_card(art)
+                    st.session_state.ai_cache[cache_key] = response_text
 
-                    st.session_state.ai_question = prompt
-                    st.session_state.ai_response = response_text
-                    st.session_state.ai_articles = related
+                related = [] if selected == "생활안내" else find_related_articles(
+                    response_text, all_arts, selected
+                )
+                if related:
+                    with st.expander("📋 관련 내용 원문 보기", expanded=False):
+                        for art in related:
+                            render_article_card(art)
 
-                except Exception as e:
-                    st.error(f"❌ 오류 발생: {e}")
+                msgs.append({
+                    "role": "assistant",
+                    "text": response_text,
+                    "articles": related,
+                })
 
-    elif st.session_state.ai_question:
-        with st.chat_message("user"):
-            st.markdown(st.session_state.ai_question)
-        with st.chat_message("assistant"):
-            _lines2 = st.session_state.ai_response.split("\n")
-            _body2 = []
-            _cites2 = []
-            for _l2 in _lines2:
-                if _l2.strip().startswith("📌"):
-                    _cites2.append(_l2)
-                else:
-                    _body2.append(_l2)
-            st.markdown("\n".join(_body2).rstrip())
-            if _cites2:
-                st.markdown("")
-                st.markdown("\n".join(_cites2))
-            if st.session_state.ai_articles:
-                with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                    for art in st.session_state.ai_articles:
-                        render_article_card(art)
+            except Exception as e:
+                err_msg = friendly_error_message(e)
+                st.error(err_msg)
+                msgs.append({
+                    "role": "assistant",
+                    "text": err_msg,
+                    "articles": [],
+                    "error": True,
+                })
