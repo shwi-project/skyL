@@ -22,64 +22,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
 
-/* ── CSS 변수: 라이트 기본값 ── */
-:root {
-    --card-bg: #fafafa;
-    --card-border: #e0e0e0;
-    --card-shadow: 0 1px 5px rgba(0,0,0,0.06);
-    --card-title: #1a1a2e;
-    --card-body: #444;
-    --mark-bg: #fff3cd;
-    --mark-color: inherit;
-    --doc-manage: #1a6ebd;
-    --doc-parking: #2e8b57;
-    --doc-community: #8b4513;
-    --doc-guide: #7b4f9e;
-}
-
-/* ── 다크모드 자동 전환 ── */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --card-bg: #1c1d28;
-        --card-border: #2a2b3a;
-        --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        --card-title: #d8daf0;
-        --card-body: #8890b0;
-        --mark-bg: #2a3520;
-        --mark-color: #8fd060;
-        --doc-manage: #5b9ef5;
-        --doc-parking: #3aad6a;
-        --doc-community: #d4845a;
-        --doc-guide: #a87dd4;
-    }
-}
-
-/* ── 조항 카드 (컬러 보더) ── */
-.article-card {
-    display: flex;
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 10px;
-    margin-bottom: 10px;
-    overflow: hidden;
-    box-shadow: var(--card-shadow);
-}
-.article-card-stripe { width: 4px; flex-shrink: 0; }
-.article-card-inner { flex: 1; padding: 13px 16px 13px 14px; }
-.article-card-doc { font-size: 0.72rem; font-weight: 600; letter-spacing: .04em; margin-right: 8px; }
-.article-card-title { font-size: 0.95rem; font-weight: 700; color: var(--card-title); }
-.article-card-body { font-size: 0.86rem; color: var(--card-body); line-height: 1.85; margin-top: 8px; }
-.article-card-body mark { background: var(--mark-bg); color: var(--mark-color); border-radius: 3px; padding: 0 2px; }
-
-.doc-manage .article-card-stripe { background: var(--doc-manage); }
-.doc-manage .article-card-doc   { color: var(--doc-manage); }
-.doc-parking .article-card-stripe { background: var(--doc-parking); }
-.doc-parking .article-card-doc   { color: var(--doc-parking); }
-.doc-community .article-card-stripe { background: var(--doc-community); }
-.doc-community .article-card-doc   { color: var(--doc-community); }
-.doc-guide .article-card-stripe { background: var(--doc-guide); }
-.doc-guide .article-card-doc   { color: var(--doc-guide); }
-
 /* ── 폰트 ── */
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
@@ -787,12 +729,29 @@ def _collapse_citations(text: str) -> str:
 # ─────────────────────────────────────────
 # 10. 카드 렌더링
 # ─────────────────────────────────────────
-DOC_CLASS = {
-    "관리규약":         "doc-manage",
-    "주차규약":         "doc-parking",
-    "커뮤니티센터 규약": "doc-community",
-    "생활안내":         "doc-guide",
+DOC_COLORS = {
+    "관리규약":         "#1a6ebd",
+    "주차규약":         "#2e8b57",
+    "커뮤니티센터 규약": "#8b4513",
+    "생활안내":         "#7b4f9e",
 }
+DOC_COLORS_DARK = {
+    "관리규약":         "#5b9ef5",
+    "주차규약":         "#3aad6a",
+    "커뮤니티센터 규약": "#d4845a",
+    "생활안내":         "#a87dd4",
+}
+
+_CARD_STYLE = """<style>
+:root {
+  --card-bg:#fafafa; --card-border:#e0e0e0; --card-shadow:0 1px 5px rgba(0,0,0,0.06);
+  --card-title:#1a1a2e; --card-body:#444; --mark-bg:#fff3cd; --mark-color:inherit;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --card-bg:#1c1d28; --card-border:#2a2b3a; --card-shadow:0 2px 8px rgba(0,0,0,0.3);
+  --card-title:#d8daf0; --card-body:#8890b0; --mark-bg:#2a3520; --mark-color:#8fd060;
+} }
+</style>"""
 
 def render_article_card(art: dict, keyword: str = "", highlights: list[str] = None) -> None:
     content = art["content"]
@@ -801,22 +760,35 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
         if term:
             content = re.sub(
                 f"(?i)({re.escape(term)})",
-                r"<mark>\1</mark>",
+                r"<mark style='background:var(--mark-bg);color:var(--mark-color);"
+                r"border-radius:3px;padding:0 2px'>\1</mark>",
                 content,
             )
-    dc = DOC_CLASS.get(art["doc"], "doc-manage")
+    lc = DOC_COLORS.get(art["doc"], "#555")
+    dc = DOC_COLORS_DARK.get(art["doc"], lc)
     display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
-    st.markdown(f"""
-<div class='article-card {dc}'>
-  <div class='article-card-stripe'></div>
-  <div class='article-card-inner'>
-    <div>
-      <span class='article-card-doc'>{art["doc"]}</span>
-      <span class='article-card-title'>{display_title}</span>
+    st.html(f"""{_CARD_STYLE}
+<div style='display:flex;background:var(--card-bg);border:1px solid var(--card-border);
+            border-radius:10px;margin-bottom:10px;overflow:hidden;box-shadow:var(--card-shadow)'>
+  <div style='width:4px;flex-shrink:0;background:{lc}'
+       class='stripe'></div>
+  <style>
+    @media (prefers-color-scheme: dark) {{ .stripe {{ background:{dc} !important; }} }}
+  </style>
+  <div style='flex:1;padding:13px 16px 13px 14px'>
+    <div style='margin-bottom:8px'>
+      <span style='font-size:0.72rem;font-weight:600;color:{lc};letter-spacing:.04em'
+            class='doc-label'>{art["doc"]}</span>
+      <style>
+        @media (prefers-color-scheme: dark) {{ .doc-label {{ color:{dc} !important; }} }}
+      </style>
+      &nbsp;<span style='font-size:0.95rem;font-weight:700;color:var(--card-title)'>{display_title}</span>
     </div>
-    <div class='article-card-body'>{content.replace(chr(10), "<br>")}</div>
+    <div style='font-size:0.86rem;color:var(--card-body);line-height:1.85'>
+      {content.replace(chr(10), "<br>")}
+    </div>
   </div>
-</div>""", unsafe_allow_html=True)
+</div>""")
 
 # ─────────────────────────────────────────
 # 11. 탭 구성
