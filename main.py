@@ -923,8 +923,7 @@ with tab_ai:
         "생활안내": "예: 쓰레기 분리수거는 어떻게 해?",
     }
 
-    def _render_assistant_message(m: dict, is_latest: bool) -> None:
-        """과거 메시지: 본문/근거만. 최신 메시지: 본문/근거 + 카드 expander."""
+    def _render_assistant_message(m: dict) -> None:
         if m.get("error"):
             st.error(m["text"])
             return
@@ -933,7 +932,7 @@ with tab_ai:
         if cites:
             st.markdown("")
             st.markdown("\n".join(cites))
-        if is_latest and m.get("articles"):
+        if m.get("articles"):
             with st.expander("📋 관련 내용 원문 보기", expanded=False):
                 for art in m["articles"]:
                     render_article_card(art)
@@ -965,7 +964,7 @@ with tab_ai:
                 with st.chat_message("user"):
                     st.markdown(user_m["text"])
                 with st.chat_message("assistant"):
-                    _render_assistant_message(asst_m, is_latest=False)
+                    _render_assistant_message(asst_m)
 
         # 새 답변 스트리밍
         with asst_container:
@@ -1026,4 +1025,4 @@ with tab_ai:
             with st.chat_message("user"):
                 st.markdown(user_m["text"])
             with st.chat_message("assistant"):
-                _render_assistant_message(asst_m, is_latest=(idx == 0))
+                _render_assistant_message(asst_m)
