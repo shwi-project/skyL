@@ -71,45 +71,30 @@ st.markdown("""
 [data-testid="baseButton-secondary"] p,
 [data-testid="stBaseButton-secondary"] p { font-size: 0.83rem !important; }
 
-/* ── 문서 선택 라디오: 필 스타일 ── */
-[data-testid="stRadio"] { margin-bottom: 4px !important; }
-[data-testid="stRadio"] > div > div { display: flex !important; gap: 8px !important; flex-wrap: wrap !important; }
-
-/* 위젯 레이블("문서 선택" 텍스트) 완전 숨김 */
-[data-testid="stRadio"] > div > label,
-[data-testid="stRadio"] > label,
-[data-testid="stRadio"] > div > div > div > p { display: none !important; }
-
-/* 라디오 동그라미 숨김 */
-[data-testid="stRadio"] input[type="radio"],
-[data-testid="stRadio"] [role="radio"],
-[data-testid="stRadio"] [data-baseweb="radio"] { display: none !important; }
-
-/* 옵션 레이블만 pill 스타일 (input 포함한 label만 대상) */
-[data-testid="stRadio"] label:has(input[type="radio"]) {
-    display: inline-flex !important;
-    align-items: center !important;
-    padding: 6px 18px !important;
-    border-radius: 20px !important;
-    border: 1.5px solid #d0d4e0 !important;
-    cursor: pointer !important;
-    color: #666 !important;
-    background: white !important;
-    font-size: 0.84rem !important;
-    font-weight: 500 !important;
-    transition: all .15s !important;
-    white-space: nowrap !important;
-    margin: 0 !important;
-}
-[data-testid="stRadio"] label:has(input:checked) {
+/* ── 문서 선택 버튼: primary=선택, secondary=미선택 ── */
+[data-testid="stBaseButton-primary"],
+[data-testid="baseButton-primary"] {
     background: #2563eb !important;
     border-color: #2563eb !important;
     color: white !important;
-    font-weight: 600 !important;
+}
+[data-testid="stBaseButton-primary"] p,
+[data-testid="baseButton-primary"] p,
+[data-testid="stBaseButton-primary"] span,
+[data-testid="baseButton-primary"] span { color: white !important; }
+[data-testid="stBaseButton-secondary"],
+[data-testid="baseButton-secondary"] {
+    background: transparent !important;
+    border-color: #d0d4e0 !important;
+    color: #555 !important;
 }
 @media (prefers-color-scheme: dark) {
-    [data-testid="stRadio"] label:has(input[type="radio"]) { border-color: #3a3b4e !important; background: transparent !important; color: #8888aa !important; }
-    [data-testid="stRadio"] label:has(input:checked) { background: #3a5ef7 !important; border-color: #3a5ef7 !important; color: white !important; }
+    [data-testid="stBaseButton-primary"],
+    [data-testid="baseButton-primary"] { background: #3a5ef7 !important; border-color: #3a5ef7 !important; }
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="baseButton-secondary"] { background: transparent !important; border-color: #3a3b4e !important; color: #8888aa !important; }
+    [data-testid="stBaseButton-secondary"] p,
+    [data-testid="baseButton-secondary"] p { color: #8888aa !important; }
 }
 
 /* ── 채팅 메시지 버블 ── */
@@ -986,17 +971,19 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 문서 선택 (라디오 → 필 모양으로 CSS 스타일링)
-    selected_doc = st.radio(
-        "문서 선택",
-        options=DOC_ORDER,
-        index=DOC_ORDER.index(st.session_state.selected_doc),
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    if selected_doc and selected_doc != st.session_state.selected_doc:
-        st.session_state.selected_doc = selected_doc
-        st.rerun()
+    # 문서 선택 버튼 (primary=선택, secondary=미선택)
+    doc_cols = st.columns(len(DOC_ORDER))
+    for _di, _doc in enumerate(DOC_ORDER):
+        with doc_cols[_di]:
+            _active = st.session_state.selected_doc == _doc
+            if st.button(
+                _doc,
+                key=f"dsel_{_doc}",
+                type="primary" if _active else "secondary",
+                use_container_width=True,
+            ) and not _active:
+                st.session_state.selected_doc = _doc
+                st.rerun()
 
     selected = st.session_state.selected_doc
 
