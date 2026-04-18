@@ -88,10 +88,10 @@ header { display: none !important; }
 
 .main .block-container { padding-top: 0 !important; }
 [data-testid="stMainBlockContainer"] {
-    padding-top: 1rem !important;
+    padding-top: 0.3rem !important;
 }
 .st-emotion-cache-zy6yx3 {
-    padding-top: 1rem !important;
+    padding-top: 0.3rem !important;
 }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
