@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>디자인 미리보기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: #f0f0f0; }
+
+/* ── 네비게이션 ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: #222; display: flex; gap: 4px; padding: 10px 20px;
+}
+nav button {
+  background: #444; color: #ccc; border: none; border-radius: 6px;
+  padding: 7px 18px; font-family: inherit; font-size: 0.85rem; cursor: pointer;
+  transition: background .2s, color .2s;
+}
+nav button.active { background: #4f8ef7; color: white; }
+
+/* ── 공통 레이아웃 ── */
+.preview { display: none; min-height: 100vh; padding: 70px 0 40px; }
+.preview.active { display: block; }
+.container { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+/* ════════════════════════════════════
+   안 1 — 다크 모드
+════════════════════════════════════ */
+#dark {
+  background: #0f1117;
+}
+#dark .app-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid #2a2a3a;
+  margin-bottom: 20px;
+}
+#dark .app-header .icon { font-size: 1.6rem; }
+#dark .app-header .title { font-size: 1.15rem; font-weight: 700; color: #e8e8f0; }
+#dark .app-header .sub { font-size: 0.75rem; color: #6b6b80; margin-top: 3px; }
+
+#dark .tabs { display: flex; gap: 0; border-bottom: 1px solid #2a2a3a; margin-bottom: 20px; }
+#dark .tab {
+  padding: 10px 22px; font-size: 0.85rem; color: #6b6b80;
+  border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s;
+}
+#dark .tab.active { color: #4f8ef7; border-bottom-color: #4f8ef7; font-weight: 600; }
+
+#dark .search-bar {
+  display: flex; gap: 10px; margin-bottom: 20px;
+}
+#dark .search-bar input {
+  flex: 1; background: #1e1e2e; border: 1px solid #3a3a4e; border-radius: 8px;
+  color: #e0e0f0; padding: 10px 14px; font-family: inherit; font-size: 0.88rem;
+  outline: none;
+}
+#dark .search-bar input::placeholder { color: #555570; }
+
+#dark .result-info { font-size: 0.8rem; color: #555570; margin-bottom: 14px; }
+#dark .result-info strong { color: #4f8ef7; }
+
+#dark .card {
+  background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px;
+  padding: 16px 18px; margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#dark .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+#dark .badge {
+  padding: 2px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;
+  color: white;
+}
+#dark .card-title { font-size: 0.98rem; font-weight: 700; color: #dde0f0; }
+#dark .card-body { font-size: 0.85rem; color: #9090b0; line-height: 1.85; }
+#dark .card-body mark { background: #2d3a1e; color: #9de870; border-radius: 3px; padding: 0 2px; }
+
+#dark .doc-btns { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+#dark .doc-btn {
+  padding: 7px 16px; border-radius: 8px; font-family: inherit; font-size: 0.83rem;
+  cursor: pointer; border: 1px solid #3a3a4e; background: #1e1e2e; color: #8888aa;
+  transition: all .15s;
+}
+#dark .doc-btn.active { background: #4f8ef7; color: white; border-color: #4f8ef7; font-weight: 600; }
+
+#dark .chat-user {
+  display: flex; justify-content: flex-end; margin-bottom: 10px;
+}
+#dark .chat-user .bubble {
+  background: #1e3a5f; color: #c8d8f0; border-radius: 14px 14px 2px 14px;
+  padding: 10px 14px; font-size: 0.87rem; max-width: 70%; line-height: 1.6;
+}
+#dark .chat-asst { margin-bottom: 14px; }
+#dark .chat-asst .bubble {
+  background: #1a1a2e; border: 1px solid #2a2a3e; color: #c0c0d8;
+  border-radius: 2px 14px 14px 14px; padding: 12px 16px;
+  font-size: 0.86rem; line-height: 1.8; max-width: 88%;
+}
+#dark .cite { color: #4f8ef7; font-size: 0.82rem; margin-top: 8px; display: block; }
+#dark .expander {
+  margin-top: 10px; border: 1px solid #2a2a3e; border-radius: 8px;
+  overflow: hidden;
+}
+#dark .expander summary {
+  background: #1e1e2e; color: #6b6b90; padding: 8px 14px;
+  font-size: 0.8rem; cursor: pointer;
+}
+
+
+/* ════════════════════════════════════
+   안 2 — 좌측 컬러 보더
+════════════════════════════════════ */
+#border {
+  background: #f7f8fa;
+}
+#border .app-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 0 14px; margin-bottom: 20px;
+  border-bottom: 1px solid #e8eaf0;
+}
+#border .app-header .icon { font-size: 1.5rem; }
+#border .app-header .title { font-size: 1.12rem; font-weight: 700; color: #1a1a2e; }
+#border .app-header .sub { font-size: 0.75rem; color: #aaa; margin-top: 3px; }
+
+#border .tabs { display: flex; gap: 0; border-bottom: 2px solid #e8eaf0; margin-bottom: 20px; }
+#border .tab {
+  padding: 10px 24px; font-size: 0.85rem; color: #999;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  cursor: pointer; transition: all .15s; font-weight: 500;
+}
+#border .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+
+#border .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+#border .search-bar input {
+  flex: 1; background: white; border: 1.5px solid #e2e6ea; border-radius: 10px;
+  color: #1a1a2e; padding: 10px 16px; font-family: inherit; font-size: 0.88rem;
+  outline: none; transition: border-color .15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+#border .search-bar input:focus { border-color: #2563eb; }
+
+#border .result-info { font-size: 0.8rem; color: #aaa; margin-bottom: 14px; }
+#border .result-info strong { color: #2563eb; }
+
+#border .card {
+  background: white; border-radius: 10px; padding: 14px 18px 14px 0;
+  margin-bottom: 10px; display: flex;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05); overflow: hidden;
+}
+#border .card-stripe {
+  width: 4px; flex-shrink: 0; border-radius: 10px 0 0 10px; margin-right: 16px;
+}
+#border .card-inner { flex: 1; }
+#border .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+#border .doc-label { font-size: 0.72rem; font-weight: 600; color: #888; letter-spacing: .03em; text-transform: uppercase; }
+#border .card-title { font-size: 0.97rem; font-weight: 700; color: #1a1a2e; }
+#border .card-body { font-size: 0.86rem; color: #444; line-height: 1.85; }
+#border .card-body mark { background: #fff3cd; border-radius: 3px; padding: 0 2px; }
+
+#border .doc-btns { display: flex; gap: 7px; margin-bottom: 18px; flex-wrap: wrap; }
+#border .doc-btn {
+  padding: 6px 16px; border-radius: 20px; font-family: inherit; font-size: 0.82rem;
+  cursor: pointer; border: 1.5px solid #e2e6ea; background: white; color: #777;
+  transition: all .15s; font-weight: 500;
+}
+#border .doc-btn.active { color: white; border-color: transparent; font-weight: 600; }
+
+#border .chat-user { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+#border .chat-user .bubble {
+  background: #2563eb; color: white; border-radius: 18px 18px 4px 18px;
+  padding: 10px 15px; font-size: 0.86rem; max-width: 70%; line-height: 1.6;
+}
+#border .chat-asst { margin-bottom: 14px; }
+#border .chat-asst .bubble {
+  background: white; border: 1.5px solid #e8eaf0; color: #333;
+  border-radius: 4px 18px 18px 18px; padding: 12px 16px;
+  font-size: 0.86rem; line-height: 1.8; max-width: 88%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+#border .cite { color: #2563eb; font-size: 0.82rem; margin-top: 8px; display: block; }
+#border .expander {
+  margin-top: 10px; border: 1.5px solid #e8eaf0; border-radius: 10px; overflow: hidden;
+}
+#border .expander summary {
+  background: #f7f8fa; color: #999; padding: 8px 14px;
+  font-size: 0.8rem; cursor: pointer;
+}
+
+
+/* ════════════════════════════════════
+   안 3 — 베이지 웜톤
+════════════════════════════════════ */
+#warm {
+  background: #fdf6ee;
+}
+#warm .app-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 0 14px; margin-bottom: 20px;
+  border-bottom: 1px solid #ecdec8;
+}
+#warm .app-header .icon { font-size: 1.5rem; }
+#warm .app-header .title { font-size: 1.12rem; font-weight: 700; color: #3d2c1e; }
+#warm .app-header .sub { font-size: 0.75rem; color: #b89070; margin-top: 3px; }
+
+#warm .tabs { display: flex; gap: 0; border-bottom: 2px solid #ecdec8; margin-bottom: 20px; }
+#warm .tab {
+  padding: 10px 24px; font-size: 0.85rem; color: #b89070;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  cursor: pointer; transition: all .15s; font-weight: 500;
+}
+#warm .tab.active { color: #c2692a; border-bottom-color: #c2692a; }
+
+#warm .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+#warm .search-bar input {
+  flex: 1; background: #fff9f3; border: 1.5px solid #ddc8aa; border-radius: 12px;
+  color: #3d2c1e; padding: 10px 16px; font-family: inherit; font-size: 0.88rem; outline: none;
+}
+#warm .search-bar input::placeholder { color: #c4a882; }
+
+#warm .result-info { font-size: 0.8rem; color: #b89070; margin-bottom: 14px; }
+#warm .result-info strong { color: #c2692a; }
+
+#warm .card {
+  background: #fffcf8; border: 1px solid #ecdec8; border-radius: 16px;
+  padding: 16px 20px; margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(180,120,60,0.08);
+}
+#warm .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+#warm .badge {
+  padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+}
+#warm .card-title { font-size: 0.97rem; font-weight: 700; color: #3d2c1e; }
+#warm .card-body { font-size: 0.86rem; color: #6b4f38; line-height: 1.9; }
+#warm .card-body mark { background: #fde9c0; border-radius: 4px; padding: 0 3px; }
+
+#warm .doc-btns { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+#warm .doc-btn {
+  padding: 6px 16px; border-radius: 20px; font-family: inherit; font-size: 0.82rem;
+  cursor: pointer; border: 1.5px solid #ddc8aa; background: #fff9f3; color: #9a7050;
+  transition: all .15s;
+}
+#warm .doc-btn.active { color: white; border-color: transparent; font-weight: 600; }
+
+#warm .chat-user { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+#warm .chat-user .bubble {
+  background: #c2692a; color: white; border-radius: 18px 18px 4px 18px;
+  padding: 10px 15px; font-size: 0.86rem; max-width: 70%; line-height: 1.6;
+}
+#warm .chat-asst { margin-bottom: 14px; }
+#warm .chat-asst .bubble {
+  background: #fffcf8; border: 1.5px solid #ecdec8; color: #5a3e2b;
+  border-radius: 4px 18px 18px 18px; padding: 12px 16px;
+  font-size: 0.86rem; line-height: 1.85; max-width: 88%;
+}
+#warm .cite { color: #c2692a; font-size: 0.82rem; margin-top: 8px; display: block; }
+#warm .expander {
+  margin-top: 10px; border: 1.5px solid #ecdec8; border-radius: 12px; overflow: hidden;
+}
+#warm .expander summary {
+  background: #fdf6ee; color: #b89070; padding: 8px 14px;
+  font-size: 0.8rem; cursor: pointer;
+}
+
+/* 공통 */
+.section-label {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; margin-bottom: 14px; margin-top: 24px;
+  opacity: .5;
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="active" onclick="show('dark',this)">안 1 — 다크 모드</button>
+  <button onclick="show('border',this)">안 2 — 컬러 보더</button>
+  <button onclick="show('warm',this)">안 3 — 베이지 웜톤</button>
+</nav>
+
+<!-- ══════════ 안 1: 다크 ══════════ -->
+<div id="dark" class="preview active">
+<div class="container">
+  <div class="app-header">
+    <div class="icon">🏰</div>
+    <div>
+      <div class="title">롯데캐슬스카이엘 규약 통합 검색</div>
+      <div class="sub">우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">🔍 키워드 검색</div>
+    <div class="tab">🤖 AI 질문 검색</div>
+  </div>
+
+  <!-- 키워드 검색 -->
+  <div class="section-label" style="color:#666">키워드 검색</div>
+  <div class="search-bar">
+    <input type="text" placeholder="예: 층간소음, 주차 위반, 이용 시간" value="주차 위반">
+  </div>
+  <div class="result-info">총 <strong>4개</strong> 조항 발견</div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="badge" style="background:#2e8b57">주차규약</span>
+      <span class="card-title">제14조 위반행위 처리기준</span>
+    </div>
+    <div class="card-body">① 무단 <mark>주차</mark> 또는 <mark>위반</mark> 차량에 대하여 관리주체는 경고 스티커 부착, 위반금 부과, 견인조치 등을 할 수 있다.<br>② 위반금은 1회 5만원, 2회 이상 10만원으로 한다.</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="badge" style="background:#1a6ebd">관리규약</span>
+      <span class="card-title">제52조 주차장 이용</span>
+    </div>
+    <div class="card-body">입주자 등은 지정된 주차구역 외 장소에 <mark>주차</mark>하거나 타인의 주차구역을 무단으로 사용하여서는 아니 된다.</div>
+  </div>
+
+  <!-- AI 검색 -->
+  <div class="section-label" style="color:#666;margin-top:32px">AI 질문 검색</div>
+  <div class="doc-btns">
+    <button class="doc-btn active">주차규약</button>
+    <button class="doc-btn">커뮤니티센터 규약</button>
+    <button class="doc-btn">관리규약</button>
+    <button class="doc-btn">생활안내</button>
+  </div>
+  <div class="chat-user"><div class="bubble">방문차량 무료 주차는 몇 시간까지야?</div></div>
+  <div class="chat-asst">
+    <div class="bubble">
+      방문차량은 <strong>기본 2시간 무료</strong>이며, 이후 초과 시 30분당 500원이 부과됩니다.<br><br>
+      세대당 1일 1회에 한해 <strong>4시간 연장</strong>이 가능하고, 관리사무소에 방문차량 등록을 하면 적용됩니다.
+      <span class="cite">📌 주차규약 제8조</span>
+    </div>
+    <div class="expander"><details><summary>📋 관련 내용 원문 보기</summary></details></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ 안 2: 컬러 보더 ══════════ -->
+<div id="border" class="preview">
+<div class="container">
+  <div class="app-header">
+    <div class="icon">🏰</div>
+    <div>
+      <div class="title">롯데캐슬스카이엘 규약 통합 검색</div>
+      <div class="sub">우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">🔍 키워드 검색</div>
+    <div class="tab">🤖 AI 질문 검색</div>
+  </div>
+
+  <div class="section-label" style="color:#aaa">키워드 검색</div>
+  <div class="search-bar">
+    <input type="text" placeholder="예: 층간소음, 주차 위반, 이용 시간" value="주차 위반">
+  </div>
+  <div class="result-info">총 <strong>4개</strong> 조항 발견</div>
+
+  <div class="card">
+    <div class="card-stripe" style="background:#2e8b57"></div>
+    <div class="card-inner">
+      <div class="card-header">
+        <span class="doc-label" style="color:#2e8b57">주차규약</span>
+        <span class="card-title">제14조 위반행위 처리기준</span>
+      </div>
+      <div class="card-body">① 무단 <mark>주차</mark> 또는 <mark>위반</mark> 차량에 대하여 관리주체는 경고 스티커 부착, 위반금 부과, 견인조치 등을 할 수 있다.<br>② 위반금은 1회 5만원, 2회 이상 10만원으로 한다.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-stripe" style="background:#1a6ebd"></div>
+    <div class="card-inner">
+      <div class="card-header">
+        <span class="doc-label" style="color:#1a6ebd">관리규약</span>
+        <span class="card-title">제52조 주차장 이용</span>
+      </div>
+      <div class="card-body">입주자 등은 지정된 주차구역 외 장소에 <mark>주차</mark>하거나 타인의 주차구역을 무단으로 사용하여서는 아니 된다.</div>
+    </div>
+  </div>
+
+  <div class="section-label" style="color:#aaa;margin-top:32px">AI 질문 검색</div>
+  <div class="doc-btns">
+    <button class="doc-btn active" style="background:#2e8b57;color:white;border-color:#2e8b57">주차규약</button>
+    <button class="doc-btn">커뮤니티센터 규약</button>
+    <button class="doc-btn">관리규약</button>
+    <button class="doc-btn">생활안내</button>
+  </div>
+  <div class="chat-user"><div class="bubble">방문차량 무료 주차는 몇 시간까지야?</div></div>
+  <div class="chat-asst">
+    <div class="bubble">
+      방문차량은 <strong>기본 2시간 무료</strong>이며, 이후 초과 시 30분당 500원이 부과됩니다.<br><br>
+      세대당 1일 1회에 한해 <strong>4시간 연장</strong>이 가능하고, 관리사무소에 방문차량 등록을 하면 적용됩니다.
+      <span class="cite">📌 주차규약 제8조</span>
+    </div>
+    <div class="expander"><details><summary>📋 관련 내용 원문 보기</summary></details></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ 안 3: 베이지 ══════════ -->
+<div id="warm" class="preview">
+<div class="container">
+  <div class="app-header">
+    <div class="icon">🏰</div>
+    <div>
+      <div class="title">롯데캐슬스카이엘 규약 통합 검색</div>
+      <div class="sub">우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">🔍 키워드 검색</div>
+    <div class="tab">🤖 AI 질문 검색</div>
+  </div>
+
+  <div class="section-label" style="color:#c4a882">키워드 검색</div>
+  <div class="search-bar">
+    <input type="text" placeholder="예: 층간소음, 주차 위반, 이용 시간" value="주차 위반">
+  </div>
+  <div class="result-info">총 <strong>4개</strong> 조항 발견</div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="badge" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7">주차규약</span>
+      <span class="card-title">제14조 위반행위 처리기준</span>
+    </div>
+    <div class="card-body">① 무단 <mark>주차</mark> 또는 <mark>위반</mark> 차량에 대하여 관리주체는 경고 스티커 부착, 위반금 부과, 견인조치 등을 할 수 있다.<br>② 위반금은 1회 5만원, 2회 이상 10만원으로 한다.</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="badge" style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9">관리규약</span>
+      <span class="card-title">제52조 주차장 이용</span>
+    </div>
+    <div class="card-body">입주자 등은 지정된 주차구역 외 장소에 <mark>주차</mark>하거나 타인의 주차구역을 무단으로 사용하여서는 아니 된다.</div>
+  </div>
+
+  <div class="section-label" style="color:#c4a882;margin-top:32px">AI 질문 검색</div>
+  <div class="doc-btns">
+    <button class="doc-btn active" style="background:#2e7d32;color:white;border-color:#2e7d32">주차규약</button>
+    <button class="doc-btn">커뮤니티센터 규약</button>
+    <button class="doc-btn">관리규약</button>
+    <button class="doc-btn">생활안내</button>
+  </div>
+  <div class="chat-user"><div class="bubble">방문차량 무료 주차는 몇 시간까지야?</div></div>
+  <div class="chat-asst">
+    <div class="bubble">
+      방문차량은 <strong>기본 2시간 무료</strong>이며, 이후 초과 시 30분당 500원이 부과됩니다.<br><br>
+      세대당 1일 1회에 한해 <strong>4시간 연장</strong>이 가능하고, 관리사무소에 방문차량 등록을 하면 적용됩니다.
+      <span class="cite">📌 주차규약 제8조</span>
+    </div>
+    <div class="expander"><details><summary>📋 관련 내용 원문 보기</summary></details></div>
+  </div>
+</div>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.preview').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
