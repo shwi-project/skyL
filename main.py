@@ -861,6 +861,24 @@ DOC_COLORS_DARK = {
     "생활안내":         "#a87dd4",
 }
 
+def _smart_linebreak(text: str) -> str:
+    """PDF 추출 줄바꿈 정리: 단락 구분(\n\n)은 유지, 단일 \n은 의미적 판단."""
+    text = text.replace("\n\n", "\x00")
+    lines = text.split("\n")
+    parts = []
+    for i, ln in enumerate(lines[:-1]):
+        nxt = lines[i + 1].lstrip()
+        keep = (
+            bool(re.match(r"^[\d①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]+[.)]\s*", nxt))  # 번호 목록
+            or bool(re.match(r"^[-•○◦]\s", nxt))                          # 불릿
+            or bool(re.search(r"[다요오]\s*$", ln.rstrip()))               # 문장 종결
+            or ln.rstrip().endswith(".")                                   # 마침표
+        )
+        parts.append(ln + ("<br>" if keep else " "))
+    parts.append(lines[-1])
+    return "".join(parts).replace("\x00", "<br><br>")
+
+
 def render_article_card(art: dict, keyword: str = "", highlights: list[str] = None) -> None:
     content = art["content"]
     terms = highlights if highlights else ([keyword] if keyword else [])
@@ -903,7 +921,7 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
       <span class='doc-lbl'>{art["doc"]}</span>
       <span class='card-title'>{display_title}</span>
     </div>
-    <div class='card-body'>{content.replace(chr(10)*2, "<br><br>").replace(chr(10), " ")}</div>
+    <div class='card-body'>{_smart_linebreak(content)}</div>
   </div>
 </div>""")
 
