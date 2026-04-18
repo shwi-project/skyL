@@ -32,9 +32,55 @@ st.markdown("""
     font-family: 'Noto Sans KR', sans-serif !important;
 }
 
-/* ── 버튼 ── */
-[data-testid="stButton"] button p { font-size: 0.82rem !important; }
-[data-testid="stButton"] button { padding: 0.3rem 0.5rem !important; min-height: 0 !important; }
+/* ── 탭: 언더라인 스타일 ── */
+[data-baseweb="tab-list"] {
+    gap: 0 !important;
+    border-bottom: 2px solid #e8eaf0 !important;
+    background: transparent !important;
+}
+[data-baseweb="tab"] {
+    font-family: 'Noto Sans KR', sans-serif !important;
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    color: #999 !important;
+    padding: 10px 22px !important;
+    background: transparent !important;
+    border: none !important;
+}
+[aria-selected="true"][data-baseweb="tab"] { color: #2563eb !important; font-weight: 600 !important; }
+[data-baseweb="tab-highlight"] { background-color: #2563eb !important; height: 2px !important; }
+[data-baseweb="tab-border"] { display: none !important; }
+[data-testid="stTabsTabPanel"] { padding-top: 1rem !important; }
+
+/* ── 문서 선택 버튼: 필 모양 ── */
+[data-testid="stButton"] button {
+    border-radius: 20px !important;
+    padding: 0.3rem 1rem !important;
+    font-family: 'Noto Sans KR', sans-serif !important;
+    font-size: 0.83rem !important;
+    font-weight: 500 !important;
+    min-height: 0 !important;
+    transition: all .15s !important;
+}
+[data-testid="stButton"] button p { font-size: 0.83rem !important; }
+
+/* ── 검색 입력창 ── */
+[data-testid="stTextInput"] input {
+    border-radius: 10px !important;
+    border: 1.5px solid #e2e6ea !important;
+    font-size: 0.9rem !important;
+    padding: 10px 14px !important;
+}
+[data-testid="stTextInput"] input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
+}
+
+/* ── 채팅 입력창 ── */
+[data-testid="stChatInput"] textarea {
+    border-radius: 12px !important;
+    font-size: 0.88rem !important;
+}
 
 /* ── 채팅 아바타 ── */
 [data-testid="stChatMessageAvatarUser"],
@@ -45,6 +91,16 @@ st.markdown("""
 [data-testid="stChatMessage"] li { font-size: 0.85rem !important; margin-bottom: 0.3rem !important; line-height: 1.7 !important; }
 [data-testid="stChatMessage"] ul,
 [data-testid="stChatMessage"] ol { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
+
+/* ── 다크모드: 탭 ── */
+@media (prefers-color-scheme: dark) {
+    [data-baseweb="tab-list"] { border-bottom-color: #2a2b3a !important; }
+    [data-baseweb="tab"] { color: #666880 !important; }
+    [aria-selected="true"][data-baseweb="tab"] { color: #7b9ef7 !important; }
+    [data-baseweb="tab-highlight"] { background-color: #7b9ef7 !important; }
+    [data-testid="stTextInput"] input { border-color: #2e2f3e !important; }
+    [data-testid="stTextInput"] input:focus { border-color: #7b9ef7 !important; box-shadow: 0 0 0 3px rgba(123,158,247,0.1) !important; }
+}
 
 /* ── 불필요 UI 숨김 ── */
 [class*="profilePreview"] { display: none !important; }
