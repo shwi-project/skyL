@@ -22,6 +22,65 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
 
+/* ── CSS 변수: 라이트 기본값 ── */
+:root {
+    --card-bg: #fafafa;
+    --card-border: #e0e0e0;
+    --card-shadow: 0 1px 5px rgba(0,0,0,0.06);
+    --card-title: #1a1a2e;
+    --card-body: #444;
+    --mark-bg: #fff3cd;
+    --mark-color: inherit;
+    --doc-manage: #1a6ebd;
+    --doc-parking: #2e8b57;
+    --doc-community: #8b4513;
+    --doc-guide: #7b4f9e;
+}
+
+/* ── 다크모드 자동 전환 ── */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --card-bg: #1c1d28;
+        --card-border: #2a2b3a;
+        --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        --card-title: #d8daf0;
+        --card-body: #8890b0;
+        --mark-bg: #2a3520;
+        --mark-color: #8fd060;
+        --doc-manage: #5b9ef5;
+        --doc-parking: #3aad6a;
+        --doc-community: #d4845a;
+        --doc-guide: #a87dd4;
+    }
+}
+
+/* ── 조항 카드 (컬러 보더) ── */
+.article-card {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+.article-card-stripe { width: 4px; flex-shrink: 0; }
+.article-card-inner { flex: 1; padding: 13px 16px 13px 14px; }
+.article-card-doc { font-size: 0.72rem; font-weight: 600; letter-spacing: .04em; margin-right: 8px; }
+.article-card-title { font-size: 0.95rem; font-weight: 700; color: var(--card-title); }
+.article-card-body { font-size: 0.86rem; color: var(--card-body); line-height: 1.85; margin-top: 8px; }
+.article-card-body mark { background: var(--mark-bg); color: var(--mark-color); border-radius: 3px; padding: 0 2px; }
+
+.doc-manage .article-card-stripe { background: var(--doc-manage); }
+.doc-manage .article-card-doc   { color: var(--doc-manage); }
+.doc-parking .article-card-stripe { background: var(--doc-parking); }
+.doc-parking .article-card-doc   { color: var(--doc-parking); }
+.doc-community .article-card-stripe { background: var(--doc-community); }
+.doc-community .article-card-doc   { color: var(--doc-community); }
+.doc-guide .article-card-stripe { background: var(--doc-guide); }
+.doc-guide .article-card-doc   { color: var(--doc-guide); }
+
+/* ── 폰트 ── */
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
 [data-testid="stChatMessage"] p,
@@ -31,68 +90,33 @@ st.markdown("""
     font-family: 'Noto Sans KR', sans-serif !important;
 }
 
-[data-testid="stButton"] button p {
-    font-size: 0.82rem !important;
-}
-[data-testid="stButton"] button {
-    padding: 0.3rem 0.5rem !important;
-    min-height: 0 !important;
-}
+/* ── 버튼 ── */
+[data-testid="stButton"] button p { font-size: 0.82rem !important; }
+[data-testid="stButton"] button { padding: 0.3rem 0.5rem !important; min-height: 0 !important; }
 
+/* ── 채팅 아바타 ── */
 [data-testid="stChatMessageAvatarUser"],
-[data-testid="stChatMessageAvatarAssistant"] {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-}
-
-[data-testid="stChatMessage"] {
-    padding: 0.5rem !important;
-    gap: 0.4rem !important;
-}
-
-[data-testid="stChatMessageAvatarAssistant"] {
-    display: none !important;
-}
-
-[data-testid="stChatMessageAvatarUser"] {
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-}
-
-[data-testid="stChatMessageAvatarAssistant"] ~ div p {
-    font-size: 0.85rem !important;
-    line-height: 1.7 !important;
-    margin-bottom: 0.4rem !important;
-}
-[data-testid="stChatMessage"] li {
-    font-size: 0.85rem !important;
-    margin-bottom: 0.3rem !important;
-    line-height: 1.7 !important;
-}
+[data-testid="stChatMessageAvatarAssistant"] { width: 24px !important; height: 24px !important; min-width: 24px !important; }
+[data-testid="stChatMessage"] { padding: 0.5rem !important; gap: 0.4rem !important; }
+[data-testid="stChatMessageAvatarAssistant"] { display: none !important; }
+[data-testid="stChatMessageAvatarAssistant"] ~ div p { font-size: 0.85rem !important; line-height: 1.7 !important; margin-bottom: 0.4rem !important; }
+[data-testid="stChatMessage"] li { font-size: 0.85rem !important; margin-bottom: 0.3rem !important; line-height: 1.7 !important; }
 [data-testid="stChatMessage"] ul,
-[data-testid="stChatMessage"] ol {
-    margin-top: 0.4rem !important;
-    margin-bottom: 0.4rem !important;
-}
+[data-testid="stChatMessage"] ol { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
 
+/* ── 불필요 UI 숨김 ── */
 [class*="profilePreview"] { display: none !important; }
 [class*="_link_gzau3"] { display: none !important; }
 [class*="viewerBadge"] { display: none !important; }
-
 #MainMenu { display: none !important; }
 [data-testid="stMainMenu"] { display: none !important; }
 header [data-testid="stToolbar"] { display: none !important; }
 header { display: none !important; }
 
+/* ── 상단 여백 ── */
 .main .block-container { padding-top: 0 !important; }
-[data-testid="stMainBlockContainer"] {
-    padding-top: 0.3rem !important;
-}
-.st-emotion-cache-zy6yx3 {
-    padding-top: 0.3rem !important;
-}
+[data-testid="stMainBlockContainer"] { padding-top: 0.3rem !important; }
+.st-emotion-cache-zy6yx3 { padding-top: 0.3rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -763,37 +787,36 @@ def _collapse_citations(text: str) -> str:
 # ─────────────────────────────────────────
 # 10. 카드 렌더링
 # ─────────────────────────────────────────
-DOC_COLORS = {
-    "관리규약":         "#1a6ebd",
-    "주차규약":         "#2e8b57",
-    "커뮤니티센터 규약": "#8b4513",
-    "생활안내":         "#7b4f9e",
+DOC_CLASS = {
+    "관리규약":         "doc-manage",
+    "주차규약":         "doc-parking",
+    "커뮤니티센터 규약": "doc-community",
+    "생활안내":         "doc-guide",
 }
 
 def render_article_card(art: dict, keyword: str = "", highlights: list[str] = None) -> None:
     content = art["content"]
-    # 하이라이트 대상: 명시적 리스트 또는 단일 키워드
     terms = highlights if highlights else ([keyword] if keyword else [])
     for term in terms:
         if term:
             content = re.sub(
                 f"(?i)({re.escape(term)})",
-                r"<mark style='background:#fff3cd;padding:0 2px;border-radius:3px'>\1</mark>",
+                r"<mark>\1</mark>",
                 content,
             )
-    bc = DOC_COLORS.get(art["doc"], "#555")
-    # 생활안내는 섹션 제목에서 > 이후만 표시
+    dc = DOC_CLASS.get(art["doc"], "doc-manage")
     display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
-    st.html(f"""
-<div style='border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;
-            margin-bottom:12px;background:#fafafa;box-shadow:0 1px 4px rgba(0,0,0,0.06)'>
-  <div style='margin-bottom:8px'>
-    <span style='background:{bc};color:white;padding:2px 8px;
-                 border-radius:4px;font-size:0.75rem;font-weight:600'>{art["doc"]}</span>
-    &nbsp;<span style='font-size:1rem;font-weight:700;color:#222'>{display_title}</span>
+    st.markdown(f"""
+<div class='article-card {dc}'>
+  <div class='article-card-stripe'></div>
+  <div class='article-card-inner'>
+    <div>
+      <span class='article-card-doc'>{art["doc"]}</span>
+      <span class='article-card-title'>{display_title}</span>
+    </div>
+    <div class='article-card-body'>{content.replace(chr(10), "<br>")}</div>
   </div>
-  <div style='font-size:0.88rem;color:#333;line-height:1.8'>{content.replace(chr(10), '<br>')}</div>
-</div>""")
+</div>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 11. 탭 구성
