@@ -77,11 +77,12 @@ st.markdown("""
     background: #16a34a !important;
     border-color: #16a34a !important;
     color: white !important;
+    font-weight: 600 !important;
 }
 [data-testid="stBaseButton-primary"] p,
 [data-testid="baseButton-primary"] p,
 [data-testid="stBaseButton-primary"] span,
-[data-testid="baseButton-primary"] span { color: white !important; }
+[data-testid="baseButton-primary"] span { color: white !important; font-weight: 600 !important; }
 [data-testid="stBaseButton-secondary"],
 [data-testid="baseButton-secondary"] {
     background: transparent !important;
@@ -902,7 +903,7 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
       <span class='doc-lbl'>{art["doc"]}</span>
       <span class='card-title'>{display_title}</span>
     </div>
-    <div class='card-body'>{content.replace(chr(10), "<br>")}</div>
+    <div class='card-body'>{content.replace(chr(10)*2, "<br><br>").replace(chr(10), " ")}</div>
   </div>
 </div>""")
 
