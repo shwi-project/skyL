@@ -742,17 +742,6 @@ DOC_COLORS_DARK = {
     "생활안내":         "#a87dd4",
 }
 
-_CARD_STYLE = """<style>
-:root {
-  --card-bg:#fafafa; --card-border:#e0e0e0; --card-shadow:0 1px 5px rgba(0,0,0,0.06);
-  --card-title:#1a1a2e; --card-body:#444; --mark-bg:#fff3cd; --mark-color:inherit;
-}
-@media (prefers-color-scheme: dark) { :root {
-  --card-bg:#1c1d28; --card-border:#2a2b3a; --card-shadow:0 2px 8px rgba(0,0,0,0.3);
-  --card-title:#d8daf0; --card-body:#8890b0; --mark-bg:#2a3520; --mark-color:#8fd060;
-} }
-</style>"""
-
 def render_article_card(art: dict, keyword: str = "", highlights: list[str] = None) -> None:
     content = art["content"]
     terms = highlights if highlights else ([keyword] if keyword else [])
@@ -760,33 +749,42 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
         if term:
             content = re.sub(
                 f"(?i)({re.escape(term)})",
-                r"<mark style='background:var(--mark-bg);color:var(--mark-color);"
-                r"border-radius:3px;padding:0 2px'>\1</mark>",
+                r"<mark class='hl'>\1</mark>",
                 content,
             )
     lc = DOC_COLORS.get(art["doc"], "#555")
     dc = DOC_COLORS_DARK.get(art["doc"], lc)
     display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
-    st.html(f"""{_CARD_STYLE}
-<div style='display:flex;background:var(--card-bg);border:1px solid var(--card-border);
-            border-radius:10px;margin-bottom:10px;overflow:hidden;box-shadow:var(--card-shadow)'>
-  <div style='width:4px;flex-shrink:0;background:{lc}'
-       class='stripe'></div>
-  <style>
-    @media (prefers-color-scheme: dark) {{ .stripe {{ background:{dc} !important; }} }}
-  </style>
-  <div style='flex:1;padding:13px 16px 13px 14px'>
-    <div style='margin-bottom:8px'>
-      <span style='font-size:0.72rem;font-weight:600;color:{lc};letter-spacing:.04em'
-            class='doc-label'>{art["doc"]}</span>
-      <style>
-        @media (prefers-color-scheme: dark) {{ .doc-label {{ color:{dc} !important; }} }}
-      </style>
-      &nbsp;<span style='font-size:0.95rem;font-weight:700;color:var(--card-title)'>{display_title}</span>
+    st.html(f"""
+<style>
+  body {{ margin:0; }}
+  .card {{ display:flex; background:#ffffff; border:1px solid #e4e6f0;
+           border-radius:10px; margin-bottom:2px; overflow:hidden;
+           box-shadow:0 2px 8px rgba(0,0,0,0.07); font-family:'Noto Sans KR',sans-serif; }}
+  .stripe {{ width:5px; flex-shrink:0; background:{lc}; }}
+  .inner {{ flex:1; padding:14px 18px 14px 14px; }}
+  .doc-lbl {{ font-size:0.72rem; font-weight:600; color:{lc}; letter-spacing:.05em; }}
+  .card-title {{ font-size:0.95rem; font-weight:700; color:#1a1a2e; margin-left:8px; }}
+  .card-body {{ font-size:0.86rem; color:#555; line-height:1.85; margin-top:9px; }}
+  .hl {{ background:#fff3cd; border-radius:3px; padding:0 2px; }}
+  @media (prefers-color-scheme: dark) {{
+    .card {{ background:#1c1d28; border-color:#2a2b3a;
+             box-shadow:0 2px 10px rgba(0,0,0,0.35); }}
+    .stripe {{ background:{dc}; }}
+    .doc-lbl {{ color:{dc}; }}
+    .card-title {{ color:#d8daf0; }}
+    .card-body {{ color:#8890b0; }}
+    .hl {{ background:#2a3520; color:#8fd060; }}
+  }}
+</style>
+<div class='card'>
+  <div class='stripe'></div>
+  <div class='inner'>
+    <div>
+      <span class='doc-lbl'>{art["doc"]}</span>
+      <span class='card-title'>{display_title}</span>
     </div>
-    <div style='font-size:0.86rem;color:var(--card-body);line-height:1.85'>
-      {content.replace(chr(10), "<br>")}
-    </div>
+    <div class='card-body'>{content.replace(chr(10), "<br>")}</div>
   </div>
 </div>""")
 
