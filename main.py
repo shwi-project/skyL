@@ -5,6 +5,10 @@ import re
 import time
 from typing import Iterator
 
+# 모듈 수준 공유 캐시 (모든 사용자 세션이 공유, TTL 1시간)
+_RESPONSE_CACHE: dict[tuple, tuple[str, float]] = {}
+_CACHE_TTL = 3600
+
 import pdfplumber
 import requests
 import streamlit as st
@@ -209,7 +213,7 @@ def ai_generate(prompt: str) -> str:
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 8192, "thinkingConfig": {"thinkingBudget": 0}},
+        "generationConfig": {"maxOutputTokens": 4096, "thinkingConfig": {"thinkingBudget": 0}},
     }
     last_err = ""
     last_status = 0
@@ -236,7 +240,7 @@ def ai_generate(prompt: str) -> str:
                     {"role": "model", "parts": [{"text": text}]},
                     {"role": "user",  "parts": [{"text": "이어서 계속 작성해줘."}]},
                 ],
-                "generationConfig": {"maxOutputTokens": 8192},
+                "generationConfig": {"maxOutputTokens": 4096},
             }, timeout=120)
             if cont.ok:
                 text += cont.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -257,7 +261,7 @@ def ai_generate_stream(prompt: str) -> Iterator[str]:
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 8192, "thinkingConfig": {"thinkingBudget": 0}},
+        "generationConfig": {"maxOutputTokens": 4096, "thinkingConfig": {"thinkingBudget": 0}},
     }
     last_err = ""
     last_status = 0
@@ -309,7 +313,7 @@ def ai_generate_stream(prompt: str) -> Iterator[str]:
                         {"role": "model", "parts": [{"text": accumulated}]},
                         {"role": "user",  "parts": [{"text": "이어서 계속 작성해줘."}]},
                     ],
-                    "generationConfig": {"maxOutputTokens": 8192},
+                    "generationConfig": {"maxOutputTokens": 4096},
                 }, timeout=120)
                 if cont.ok:
                     tail = cont.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -499,6 +503,14 @@ _SYNONYMS = {
     "놀이터": "어린이놀이터",
     "헬스장": "주민운동시설",
     "커뮤니티": "주민공동시설",
+    # 주차규약
+    "오토바이": "이륜자동차",
+    "바이크": "이륜자동차",
+    "렌트카": "대체차량",
+    # 커뮤니티센터 규약
+    "사우나": "목욕탕",
+    "골프장": "골프 연습장",
+    "도서관": "작은 도서관",
 }
 
 def extract_keywords(question: str) -> list[str]:
@@ -863,10 +875,6 @@ with tab_ai:
         st.session_state.messages_by_doc[selected] = []
     msgs: list[dict] = st.session_state.messages_by_doc[selected]
 
-    # 세션 스코프 응답 캐시 (같은 문서+질문 재호출 시 즉시 반환)
-    if "ai_cache" not in st.session_state:
-        st.session_state.ai_cache = {}
-
     # 대화 초기화 버튼 (이력 있을 때만 노출)
     if msgs:
         clear_col, _ = st.columns([1, 6])
@@ -965,7 +973,8 @@ with tab_ai:
                     context  = get_context_for_ai(selected, prompt, all_arts)
                     full_p   = build_prompt(selected, context, prompt)
                     cache_key = (selected, prompt.strip())
-                    cached = st.session_state.ai_cache.get(cache_key)
+                    _entry = _RESPONSE_CACHE.get(cache_key)
+                    cached = _entry[0] if (_entry and time.time() - _entry[1] < _CACHE_TTL) else None
 
                     if cached is not None:
                         response_text = cached
@@ -978,7 +987,7 @@ with tab_ai:
                             raise RuntimeError("빈 응답")
                         response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
                         response_text = _collapse_citations(response_text)
-                        st.session_state.ai_cache[cache_key] = response_text
+                        _RESPONSE_CACHE[cache_key] = (response_text, time.time())
 
                     body, cites = split_body_and_citations(response_text)
                     final = "\n".join(body).rstrip()
