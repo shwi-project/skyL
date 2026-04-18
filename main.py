@@ -52,17 +52,43 @@ st.markdown("""
 [data-baseweb="tab-border"] { display: none !important; }
 [data-testid="stTabsTabPanel"] { padding-top: 1rem !important; }
 
-/* ── 문서 선택 버튼: 필 모양 ── */
-[data-testid="stButton"] button {
+/* ── 버튼: 필 모양 (Streamlit 버전별 셀렉터 전수 적용) ── */
+[data-testid="stButton"] button,
+[data-testid="baseButton-primary"],
+[data-testid="baseButton-secondary"],
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"],
+.stButton > button {
     border-radius: 20px !important;
-    padding: 0.3rem 1rem !important;
+    padding: 0.35rem 1.1rem !important;
     font-family: 'Noto Sans KR', sans-serif !important;
     font-size: 0.83rem !important;
     font-weight: 500 !important;
     min-height: 0 !important;
     transition: all .15s !important;
 }
-[data-testid="stButton"] button p { font-size: 0.83rem !important; }
+[data-testid="stButton"] button p,
+[data-testid="baseButton-primary"] p,
+[data-testid="baseButton-secondary"] p,
+[data-testid="stBaseButton-primary"] p,
+[data-testid="stBaseButton-secondary"] p { font-size: 0.83rem !important; }
+
+/* secondary 버튼: 테두리만, 배경 투명 */
+[data-testid="baseButton-secondary"],
+[data-testid="stBaseButton-secondary"],
+[data-testid="stButton"] button[kind="secondary"] {
+    background: transparent !important;
+    border: 1.5px solid #d0d4e0 !important;
+    color: #666 !important;
+}
+@media (prefers-color-scheme: dark) {
+    [data-testid="baseButton-secondary"],
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="stButton"] button[kind="secondary"] {
+        border-color: #3a3b4e !important;
+        color: #8888aa !important;
+    }
+}
 
 /* ── 검색 입력창 ── */
 [data-testid="stTextInput"] input {
