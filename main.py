@@ -971,16 +971,15 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 문서 선택 버튼 (primary=선택, secondary=미선택)
-    doc_cols = st.columns(len(DOC_ORDER))
+    # 문서 선택 버튼: 콤팩트 pill (우측에 여백 컬럼으로 좌정렬 효과)
+    _dcols = st.columns([2, 3.5, 2, 2, 5])
     for _di, _doc in enumerate(DOC_ORDER):
-        with doc_cols[_di]:
+        with _dcols[_di]:
             _active = st.session_state.selected_doc == _doc
             if st.button(
                 _doc,
                 key=f"dsel_{_doc}",
                 type="primary" if _active else "secondary",
-                use_container_width=True,
             ) and not _active:
                 st.session_state.selected_doc = _doc
                 st.rerun()
@@ -1055,10 +1054,18 @@ with tab_ai:
     # 입력창 상단 고정
     prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
 
+    def _user_bubble(text: str) -> None:
+        st.markdown(
+            f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
+            f'<div style="background:#2563eb;color:#fff;border-radius:16px 16px 4px 16px;'
+            f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
+            f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
+            unsafe_allow_html=True,
+        )
+
     if prompt:
         # 스트리밍 중엔 현재 Q&A만 표시 (이력 렌더 없음 → DOM 충돌 방지)
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        _user_bubble(prompt)
 
         response_text = None
         related: list[dict] = []
@@ -1076,8 +1083,7 @@ with tab_ai:
         ]
         with hist_container:
             for user_m, asst_m in reversed(old_pairs):
-                with st.chat_message("user"):
-                    st.markdown(user_m["text"])
+                _user_bubble(user_m["text"])
                 with st.chat_message("assistant"):
                     _render_assistant_message(asst_m)
 
@@ -1137,7 +1143,6 @@ with tab_ai:
             if i + 1 < len(msgs)
         ]
         for idx, (user_m, asst_m) in enumerate(reversed(pairs)):
-            with st.chat_message("user"):
-                st.markdown(user_m["text"])
+            _user_bubble(user_m["text"])
             with st.chat_message("assistant"):
                 _render_assistant_message(asst_m)
