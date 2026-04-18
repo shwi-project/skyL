@@ -869,10 +869,12 @@ def _smart_linebreak(text: str) -> str:
     for i, ln in enumerate(lines[:-1]):
         nxt = lines[i + 1].lstrip()
         keep = (
-            bool(re.match(r"^[\d①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]+[.)]\s*", nxt))  # 번호 목록
-            or bool(re.match(r"^[-•○◦]\s", nxt))                          # 불릿
-            or bool(re.search(r"[다요오]\s*$", ln.rstrip()))               # 문장 종결
-            or ln.rstrip().endswith(".")                                   # 마침표
+            bool(re.match(r"^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", nxt))  # 원형 번호 ①② (. 없음)
+            or bool(re.match(r"^\d+[.)]\s", nxt))                     # 아라비아 번호 1. 2)
+            or bool(re.match(r"^제\d+조", nxt))                        # 조항 헤더
+            or bool(re.match(r"^[-•○◦]\s", nxt))                      # 불릿
+            or bool(re.search(r"[다요오]\s*$", ln.rstrip()))            # 문장 종결
+            or ln.rstrip().endswith(".")                               # 마침표
         )
         parts.append(ln + ("<br>" if keep else " "))
     parts.append(lines[-1])
