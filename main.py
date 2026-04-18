@@ -74,10 +74,21 @@ st.markdown("""
 /* ── 문서 선택 라디오: 필 스타일 ── */
 [data-testid="stRadio"] { margin-bottom: 4px !important; }
 [data-testid="stRadio"] > div > div { display: flex !important; gap: 8px !important; flex-wrap: wrap !important; }
-[data-testid="stRadio"] input[type="radio"] { display: none !important; }
+
+/* 위젯 레이블("문서 선택" 텍스트) 완전 숨김 */
+[data-testid="stRadio"] > div > label,
+[data-testid="stRadio"] > label,
+[data-testid="stRadio"] > div > div > div > p { display: none !important; }
+
+/* 라디오 동그라미 숨김 */
+[data-testid="stRadio"] input[type="radio"],
 [data-testid="stRadio"] [role="radio"],
 [data-testid="stRadio"] [data-baseweb="radio"] { display: none !important; }
-[data-testid="stRadio"] label {
+
+/* 옵션 레이블만 pill 스타일 (input 포함한 label만 대상) */
+[data-testid="stRadio"] label:has(input[type="radio"]) {
+    display: inline-flex !important;
+    align-items: center !important;
     padding: 6px 18px !important;
     border-radius: 20px !important;
     border: 1.5px solid #d0d4e0 !important;
@@ -89,8 +100,6 @@ st.markdown("""
     transition: all .15s !important;
     white-space: nowrap !important;
     margin: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
 }
 [data-testid="stRadio"] label:has(input:checked) {
     background: #2563eb !important;
@@ -99,7 +108,7 @@ st.markdown("""
     font-weight: 600 !important;
 }
 @media (prefers-color-scheme: dark) {
-    [data-testid="stRadio"] label { border-color: #3a3b4e !important; background: transparent !important; color: #8888aa !important; }
+    [data-testid="stRadio"] label:has(input[type="radio"]) { border-color: #3a3b4e !important; background: transparent !important; color: #8888aa !important; }
     [data-testid="stRadio"] label:has(input:checked) { background: #3a5ef7 !important; border-color: #3a5ef7 !important; color: white !important; }
 }
 
