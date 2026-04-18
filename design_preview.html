@@ -354,7 +354,8 @@ nav button.active { background: #4f8ef7; color: white; }
   <button class="active" onclick="show('dark',this)">안 1 — 다크</button>
   <button onclick="show('border',this)">안 2 — 컬러 보더</button>
   <button onclick="show('warm',this)">안 3 — 베이지 웜톤</button>
-  <button onclick="show('dark-border',this)">안 4 — 컬러 보더 다크 ★</button>
+  <button onclick="show('dark-border',this)">안 4 — 컬러 보더 다크</button>
+  <button onclick="show('auto',this)">★ 자동 다크모드 (실제 적용안)</button>
 </nav>
 
 <!-- ══════════ 안 1: 다크 ══════════ -->
@@ -588,6 +589,209 @@ nav button.active { background: #4f8ef7; color: white; }
     <div class="bubble">
       방문차량은 <strong style="color:#d8daf0">기본 2시간 무료</strong>이며, 이후 초과 시 30분당 500원이 부과됩니다.<br><br>
       세대당 1일 1회에 한해 <strong style="color:#d8daf0">4시간 연장</strong>이 가능하고, 관리사무소에 방문차량 등록을 하면 적용됩니다.
+      <span class="cite">📌 주차규약 제8조</span>
+    </div>
+    <div class="expander"><details><summary>📋 관련 내용 원문 보기</summary></details></div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ 자동 다크모드 ══════════ -->
+<div id="auto" class="preview">
+<style>
+/* CSS 변수 — 라이트 기본값 */
+#auto {
+  --bg: #f7f8fa;
+  --card-bg: #ffffff;
+  --card-border: #e8eaf0;
+  --card-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  --title-color: #1a1a2e;
+  --body-color: #444;
+  --sub-color: #aaa;
+  --tab-active: #2563eb;
+  --tab-inactive: #999;
+  --tab-border: #e8eaf0;
+  --input-bg: #ffffff;
+  --input-border: #e2e6ea;
+  --result-accent: #2563eb;
+  --chat-user-bg: #2563eb;
+  --chat-user-color: #ffffff;
+  --chat-asst-bg: #ffffff;
+  --chat-asst-border: #e8eaf0;
+  --chat-asst-color: #333;
+  --cite-color: #2563eb;
+  --expander-bg: #f7f8fa;
+  --expander-color: #999;
+  --doc-btn-bg: #ffffff;
+  --doc-btn-border: #e2e6ea;
+  --doc-btn-color: #777;
+  --mark-bg: #fff3cd;
+  --mark-color: inherit;
+  --section-label: #aaa;
+  background: var(--bg);
+}
+
+/* 다크모드 자동 전환 */
+@media (prefers-color-scheme: dark) {
+  #auto {
+    --bg: #111318;
+    --card-bg: #1a1b24;
+    --card-border: #25262f;
+    --card-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    --title-color: #e2e4f0;
+    --body-color: #8890b0;
+    --sub-color: #555770;
+    --tab-active: #7b9ef7;
+    --tab-inactive: #555770;
+    --tab-border: #25262f;
+    --input-bg: #1a1b24;
+    --input-border: #2e2f3e;
+    --result-accent: #7b9ef7;
+    --chat-user-bg: #253a6e;
+    --chat-user-color: #c0cef0;
+    --chat-asst-bg: #1a1b24;
+    --chat-asst-border: #25262f;
+    --chat-asst-color: #b0b4d0;
+    --cite-color: #7b9ef7;
+    --expander-bg: #1a1b24;
+    --expander-color: #555770;
+    --doc-btn-bg: #1a1b24;
+    --doc-btn-border: #2e2f3e;
+    --doc-btn-color: #666880;
+    --mark-bg: #2a3520;
+    --mark-color: #8fd060;
+    --section-label: #444660;
+  }
+}
+
+#auto .app-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 0 14px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+#auto .app-header .icon { font-size: 1.5rem; }
+#auto .app-header .title { font-size: 1.12rem; font-weight: 700; color: var(--title-color); }
+#auto .app-header .sub { font-size: 0.75rem; color: var(--sub-color); margin-top: 3px; }
+
+#auto .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--tab-border); margin-bottom: 20px; }
+#auto .tab {
+  padding: 10px 24px; font-size: 0.85rem; color: var(--tab-inactive);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  cursor: pointer; transition: all .15s; font-weight: 500;
+}
+#auto .tab.active { color: var(--tab-active); border-bottom-color: var(--tab-active); }
+
+#auto .search-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+#auto .search-bar input {
+  flex: 1; background: var(--input-bg); border: 1.5px solid var(--input-border);
+  border-radius: 10px; color: var(--title-color); padding: 10px 16px;
+  font-family: inherit; font-size: 0.88rem; outline: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+#auto .result-info { font-size: 0.8rem; color: var(--sub-color); margin-bottom: 14px; }
+#auto .result-info strong { color: var(--result-accent); }
+
+#auto .card {
+  background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;
+  padding: 14px 18px 14px 0; margin-bottom: 10px; display: flex;
+  box-shadow: var(--card-shadow); overflow: hidden;
+}
+#auto .card-stripe { width: 4px; flex-shrink: 0; border-radius: 10px 0 0 10px; margin-right: 16px; }
+#auto .card-inner { flex: 1; }
+#auto .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+#auto .card-title { font-size: 0.97rem; font-weight: 700; color: var(--title-color); }
+#auto .card-body { font-size: 0.86rem; color: var(--body-color); line-height: 1.85; }
+#auto .card-body mark { background: var(--mark-bg); color: var(--mark-color); border-radius: 3px; padding: 0 2px; }
+
+#auto .doc-btns { display: flex; gap: 7px; margin-bottom: 18px; flex-wrap: wrap; }
+#auto .doc-btn {
+  padding: 6px 16px; border-radius: 20px; font-family: inherit; font-size: 0.82rem;
+  cursor: pointer; border: 1.5px solid var(--doc-btn-border);
+  background: var(--doc-btn-bg); color: var(--doc-btn-color);
+  transition: all .15s; font-weight: 500;
+}
+#auto .doc-btn.active { color: white; border-color: transparent; font-weight: 600; }
+
+#auto .chat-user { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+#auto .chat-user .bubble {
+  background: var(--chat-user-bg); color: var(--chat-user-color);
+  border-radius: 18px 18px 4px 18px; padding: 10px 15px;
+  font-size: 0.86rem; max-width: 70%; line-height: 1.6;
+}
+#auto .chat-asst { margin-bottom: 14px; }
+#auto .chat-asst .bubble {
+  background: var(--chat-asst-bg); border: 1.5px solid var(--chat-asst-border);
+  color: var(--chat-asst-color); border-radius: 4px 18px 18px 18px;
+  padding: 12px 16px; font-size: 0.86rem; line-height: 1.8; max-width: 88%;
+}
+#auto .cite { color: var(--cite-color); font-size: 0.82rem; margin-top: 8px; display: block; }
+#auto .expander { margin-top: 10px; border: 1.5px solid var(--card-border); border-radius: 10px; overflow: hidden; }
+#auto .expander summary {
+  background: var(--expander-bg); color: var(--expander-color);
+  padding: 8px 14px; font-size: 0.8rem; cursor: pointer;
+}
+#auto .auto-notice {
+  font-size: 0.78rem; color: var(--sub-color);
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 8px; padding: 8px 14px; margin-bottom: 20px;
+  text-align: center;
+}
+</style>
+<div class="container">
+  <div class="auto-notice">💡 이 미리보기는 OS 다크모드 설정에 따라 자동으로 전환됩니다</div>
+
+  <div class="app-header">
+    <div class="icon">🏰</div>
+    <div>
+      <div class="title">롯데캐슬스카이엘 규약 통합 검색</div>
+      <div class="sub">우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">🔍 키워드 검색</div>
+    <div class="tab">🤖 AI 질문 검색</div>
+  </div>
+
+  <div class="section-label" style="color:var(--section-label)">키워드 검색</div>
+  <div class="search-bar">
+    <input type="text" placeholder="예: 층간소음, 주차 위반, 이용 시간" value="주차 위반">
+  </div>
+  <div class="result-info">총 <strong>4개</strong> 조항 발견</div>
+
+  <div class="card">
+    <div class="card-stripe" style="background:#3aad6a"></div>
+    <div class="card-inner">
+      <div class="card-header">
+        <span style="font-size:0.72rem;font-weight:600;color:#3aad6a;letter-spacing:.04em">주차규약</span>
+        <span class="card-title">제14조 위반행위 처리기준</span>
+      </div>
+      <div class="card-body">① 무단 <mark>주차</mark> 또는 <mark>위반</mark> 차량에 대하여 관리주체는 경고 스티커 부착, 위반금 부과, 견인조치 등을 할 수 있다.<br>② 위반금은 1회 5만원, 2회 이상 10만원으로 한다.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-stripe" style="background:#5b9ef5"></div>
+    <div class="card-inner">
+      <div class="card-header">
+        <span style="font-size:0.72rem;font-weight:600;color:#5b9ef5;letter-spacing:.04em">관리규약</span>
+        <span class="card-title">제52조 주차장 이용</span>
+      </div>
+      <div class="card-body">입주자 등은 지정된 주차구역 외 장소에 <mark>주차</mark>하거나 타인의 주차구역을 무단으로 사용하여서는 아니 된다.</div>
+    </div>
+  </div>
+
+  <div class="section-label" style="color:var(--section-label);margin-top:32px">AI 질문 검색</div>
+  <div class="doc-btns">
+    <button class="doc-btn active" style="background:#3aad6a;border-color:#3aad6a">주차규약</button>
+    <button class="doc-btn">커뮤니티센터 규약</button>
+    <button class="doc-btn">관리규약</button>
+    <button class="doc-btn">생활안내</button>
+  </div>
+  <div class="chat-user"><div class="bubble">방문차량 무료 주차는 몇 시간까지야?</div></div>
+  <div class="chat-asst">
+    <div class="bubble">
+      방문차량은 <strong>기본 2시간 무료</strong>이며, 이후 초과 시 30분당 500원이 부과됩니다.<br><br>
+      세대당 1일 1회에 한해 <strong>4시간 연장</strong>이 가능하고, 관리사무소에 방문차량 등록을 하면 적용됩니다.
       <span class="cite">📌 주차규약 제8조</span>
     </div>
     <div class="expander"><details><summary>📋 관련 내용 원문 보기</summary></details></div>
