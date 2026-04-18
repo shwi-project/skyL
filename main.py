@@ -71,11 +71,11 @@ st.markdown("""
 [data-testid="baseButton-secondary"] p,
 [data-testid="stBaseButton-secondary"] p { font-size: 0.83rem !important; }
 
-/* ── 문서 선택 버튼: primary=선택, secondary=미선택 ── */
+/* ── 문서 선택 버튼: primary=선택(녹색), secondary=미선택 ── */
 [data-testid="stBaseButton-primary"],
 [data-testid="baseButton-primary"] {
-    background: #2563eb !important;
-    border-color: #2563eb !important;
+    background: #16a34a !important;
+    border-color: #16a34a !important;
     color: white !important;
 }
 [data-testid="stBaseButton-primary"] p,
@@ -90,7 +90,7 @@ st.markdown("""
 }
 @media (prefers-color-scheme: dark) {
     [data-testid="stBaseButton-primary"],
-    [data-testid="baseButton-primary"] { background: #3a5ef7 !important; border-color: #3a5ef7 !important; }
+    [data-testid="baseButton-primary"] { background: #22c55e !important; border-color: #22c55e !important; }
     [data-testid="stBaseButton-secondary"],
     [data-testid="baseButton-secondary"] { background: transparent !important; border-color: #3a3b4e !important; color: #8888aa !important; }
     [data-testid="stBaseButton-secondary"] p,
@@ -114,16 +114,24 @@ st.markdown("""
     }
 }
 
-/* ── 검색 입력창 ── */
-[data-testid="stTextInput"] input {
+/* ── 검색 입력창 (이중 테두리 방지) ── */
+[data-testid="stTextInput"] [data-baseweb="input"] {
     border-radius: 10px !important;
     border: 1.5px solid #e2e6ea !important;
+    box-shadow: none !important;
+    transition: border-color .15s, box-shadow .15s !important;
+}
+[data-testid="stTextInput"] [data-baseweb="input"]:focus-within {
+    border-color: #4f68e8 !important;
+    box-shadow: 0 0 0 2px rgba(79,104,232,0.12) !important;
+}
+[data-testid="stTextInput"] input {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
     font-size: 0.9rem !important;
     padding: 10px 14px !important;
-}
-[data-testid="stTextInput"] input:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.08) !important;
+    background: transparent !important;
 }
 
 /* ── 채팅 입력창 ── */
@@ -1032,19 +1040,12 @@ with tab_ai:
                 for art in m["articles"]:
                     render_article_card(art)
 
-    # 채팅 입력창 + 대화 초기화 버튼 (같은 행)
-    _in_col, _clr_col = st.columns([8, 1])
-    with _in_col:
-        prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
-    with _clr_col:
-        if msgs and st.button("🗑️", key=f"clear_{selected}", help="대화 초기화", use_container_width=True):
-            st.session_state.messages_by_doc[selected] = []
-            st.rerun()
+    prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
 
     def _user_bubble(text: str) -> None:
         st.markdown(
             f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
-            f'<div style="background:#2563eb;color:#fff;border-radius:16px 16px 4px 16px;'
+            f'<div style="background:#4f68e8;color:#fff;border-radius:16px 16px 4px 16px;'
             f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
             f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
             unsafe_allow_html=True,
