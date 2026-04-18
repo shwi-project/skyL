@@ -75,6 +75,8 @@ st.markdown("""
 [data-testid="stRadio"] { margin-bottom: 4px !important; }
 [data-testid="stRadio"] > div > div { display: flex !important; gap: 8px !important; flex-wrap: wrap !important; }
 [data-testid="stRadio"] input[type="radio"] { display: none !important; }
+[data-testid="stRadio"] [role="radio"],
+[data-testid="stRadio"] [data-baseweb="radio"] { display: none !important; }
 [data-testid="stRadio"] label {
     padding: 6px 18px !important;
     border-radius: 20px !important;
@@ -87,6 +89,8 @@ st.markdown("""
     transition: all .15s !important;
     white-space: nowrap !important;
     margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
 }
 [data-testid="stRadio"] label:has(input:checked) {
     background: #2563eb !important;
@@ -141,6 +145,13 @@ st.markdown("""
 [data-testid="stChatInput"] textarea {
     border-radius: 12px !important;
     font-size: 0.88rem !important;
+}
+[data-testid="stChatInput"] > div {
+    border-radius: 12px !important;
+    border-color: #e2e6ea !important;
+}
+@media (prefers-color-scheme: dark) {
+    [data-testid="stChatInput"] > div { border-color: #3a3b4e !important; }
 }
 
 /* ── 채팅 아바타 ── */
@@ -989,7 +1000,7 @@ with tab_ai:
 
     # 대화 초기화 버튼 (이력 있을 때만 노출)
     if msgs:
-        clear_col, _ = st.columns([1, 6])
+        _, clear_col, _ = st.columns([4, 2, 4])
         with clear_col:
             if st.button("🗑️ 대화 초기화", key=f"clear_{selected}", use_container_width=True):
                 st.session_state.messages_by_doc[selected] = []
