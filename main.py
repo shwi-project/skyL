@@ -97,26 +97,17 @@ st.markdown("""
     [data-testid="baseButton-secondary"] p { color: #8888aa !important; }
 }
 
-/* ── 채팅 메시지 버블 ── */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    background: rgba(37,99,235,0.07) !important;
-    border: 1px solid rgba(37,99,235,0.13) !important;
-    border-radius: 16px 16px 4px 16px !important;
-    margin-left: 12% !important;
-}
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-    background: white !important;
+/* ── AI 답변 박스 (사용자 메시지는 HTML로 직접 렌더) ── */
+[data-testid="stChatMessage"] {
+    background: #ffffff !important;
     border: 1px solid #e8eaf0 !important;
-    border-radius: 4px 16px 16px 16px !important;
+    border-radius: 14px !important;
+    padding: 1rem 1.2rem !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
-    margin-right: 4% !important;
+    gap: 0 !important;
 }
 @media (prefers-color-scheme: dark) {
-    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-        background: rgba(60,94,247,0.15) !important;
-        border-color: rgba(60,94,247,0.25) !important;
-    }
-    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
+    [data-testid="stChatMessage"] {
         background: #1c1d28 !important;
         border-color: #2a2b3a !important;
         box-shadow: none !important;
@@ -148,12 +139,9 @@ st.markdown("""
     [data-testid="stChatInput"] > div { border-color: #3a3b4e !important; }
 }
 
-/* ── 채팅 아바타 ── */
-[data-testid="stChatMessageAvatarUser"],
-[data-testid="stChatMessageAvatarAssistant"] { width: 24px !important; height: 24px !important; min-width: 24px !important; }
-[data-testid="stChatMessage"] { padding: 0.5rem !important; gap: 0.4rem !important; }
+/* ── 채팅 아바타 숨김 ── */
 [data-testid="stChatMessageAvatarAssistant"] { display: none !important; }
-[data-testid="stChatMessageAvatarAssistant"] ~ div p { font-size: 0.85rem !important; line-height: 1.7 !important; margin-bottom: 0.4rem !important; }
+[data-testid="stChatMessage"] p { font-size: 0.85rem !important; line-height: 1.7 !important; margin-bottom: 0.4rem !important; }
 [data-testid="stChatMessage"] li { font-size: 0.85rem !important; margin-bottom: 0.3rem !important; line-height: 1.7 !important; }
 [data-testid="stChatMessage"] ul,
 [data-testid="stChatMessage"] ol { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
@@ -971,8 +959,8 @@ with tab_ai:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
 
-    # 문서 선택 버튼: 콤팩트 pill (우측에 여백 컬럼으로 좌정렬 효과)
-    _dcols = st.columns([2, 3.5, 2, 2, 5])
+    # 문서 선택 버튼: 4등분 균일 너비
+    _dcols = st.columns(4)
     for _di, _doc in enumerate(DOC_ORDER):
         with _dcols[_di]:
             _active = st.session_state.selected_doc == _doc
@@ -980,6 +968,7 @@ with tab_ai:
                 _doc,
                 key=f"dsel_{_doc}",
                 type="primary" if _active else "secondary",
+                use_container_width=True,
             ) and not _active:
                 st.session_state.selected_doc = _doc
                 st.rerun()
@@ -992,14 +981,6 @@ with tab_ai:
     if selected not in st.session_state.messages_by_doc:
         st.session_state.messages_by_doc[selected] = []
     msgs: list[dict] = st.session_state.messages_by_doc[selected]
-
-    # 대화 초기화 버튼 (이력 있을 때만 노출)
-    if msgs:
-        _, clear_col, _ = st.columns([4, 2, 4])
-        with clear_col:
-            if st.button("🗑️ 대화 초기화", key=f"clear_{selected}", use_container_width=True):
-                st.session_state.messages_by_doc[selected] = []
-                st.rerun()
 
     # 문서별 시스템 프롬프트 분기
     def build_prompt(doc_name: str, context: str, question: str) -> str:
@@ -1051,8 +1032,14 @@ with tab_ai:
                 for art in m["articles"]:
                     render_article_card(art)
 
-    # 입력창 상단 고정
-    prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
+    # 채팅 입력창 + 대화 초기화 버튼 (같은 행)
+    _in_col, _clr_col = st.columns([8, 1])
+    with _in_col:
+        prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
+    with _clr_col:
+        if msgs and st.button("🗑️", key=f"clear_{selected}", help="대화 초기화", use_container_width=True):
+            st.session_state.messages_by_doc[selected] = []
+            st.rerun()
 
     def _user_bubble(text: str) -> None:
         st.markdown(
