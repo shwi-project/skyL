@@ -179,29 +179,39 @@ header { display: none !important; }
 [data-testid="stMainBlockContainer"] { padding-top: 0.3rem !important; }
 .st-emotion-cache-zy6yx3 { padding-top: 0.3rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
+
+/* ── 홈 화면 ── */
+.home-greeting { text-align:center; padding:2.5rem 0 1.5rem; }
+.home-greeting h1 { font-size:1.9rem; font-weight:700; color:#1a1a1a; letter-spacing:-0.5px; margin-bottom:0.3rem; }
+.home-greeting p { font-size:1.05rem; color:#888; margin:0; }
+@media (prefers-color-scheme: dark) {
+    .home-greeting h1 { color:#d8daf0; }
+    .home-greeting p { color:#666880; }
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 헤더 (중앙 정렬)
+# 헤더
 try:
     with open("logo.png", "rb") as f:
-        logo_b64 = base64.b64encode(f.read()).decode()
-    logo_html = (
-        f"<img src='data:image/png;base64,{logo_b64}' "
-        "style='width:60px;height:60px;object-fit:contain;margin-bottom:0.5rem;pointer-events:none;'>"
+        _logo_b64 = base64.b64encode(f.read()).decode()
+    _logo_sm = (
+        f"<img src='data:image/png;base64,{_logo_b64}' "
+        "style='width:32px;height:32px;object-fit:contain;vertical-align:middle;pointer-events:none;'>"
     )
 except Exception:
-    logo_html = "<div style='font-size:3rem;margin-bottom:0.4rem'>🏰</div>"
+    _logo_sm = "<span style='font-size:1.4rem;vertical-align:middle'>🏰</span>"
 
-st.markdown(
-    f"""<div style='text-align:center;padding:2rem 0 0.6rem'>
-      {logo_html}
-      <div style='font-size:1.7rem;font-weight:700;color:#1a1a1a;letter-spacing:-0.3px'>롯데캐슬스카이엘</div>
-      <div style='font-size:1rem;font-weight:500;color:#555;margin-top:0.15rem'>규약 통합 검색</div>
-      <div style='font-size:0.8rem;color:#aaa;margin-top:0.5rem'>우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
-    </div>""",
-    unsafe_allow_html=True,
-)
+_hcol1, _hcol2 = st.columns([0.6, 9.4])
+with _hcol1:
+    st.markdown(f"<div style='padding-top:6px'>{_logo_sm}</div>", unsafe_allow_html=True)
+with _hcol2:
+    if st.button("원당역 롯데캐슬스카이엘", key="home_btn", type="secondary"):
+        for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
+            st.session_state.pop(_k, None)
+        st.session_state.search_mode = "ai"
+        st.rerun()
+st.markdown("<hr style='margin:0.4rem 0 0.6rem'>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # ⚙️ 컨텍스트 압축 설정
@@ -288,20 +298,6 @@ if "selected_doc" not in st.session_state or st.session_state.selected_doc not i
     st.session_state.selected_doc = DOC_ORDER[0]
 if "search_mode" not in st.session_state:
     st.session_state.search_mode = "ai"
-
-# 모드 전환 pill 버튼
-_, _col_kw, _col_ai, _ = st.columns([2, 1, 1, 2])
-with _col_kw:
-    if st.button("🔎 키워드", use_container_width=True,
-                 type="primary" if st.session_state.search_mode == "keyword" else "secondary"):
-        st.session_state.search_mode = "keyword"
-        st.rerun()
-with _col_ai:
-    if st.button("✦ AI 검색", use_container_width=True,
-                 type="primary" if st.session_state.search_mode == "ai" else "secondary"):
-        st.session_state.search_mode = "ai"
-        st.rerun()
-st.markdown("<div style='margin-bottom:0.6rem'></div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 5. Gemini AI
@@ -981,234 +977,305 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
 </div>""")
 
 # ─────────────────────────────────────────
-# 11. 검색 모드별 화면
+# 10-a. 키워드 검색 실행
 # ─────────────────────────────────────────
+def run_keyword_search(query: str) -> tuple[list[dict], list[str]]:
+    kw = query.strip()
+    search_terms = [kw.lower()]
+    for syn_key, syn_val in _SYNONYMS.items():
+        if syn_key in kw and syn_val.lower() not in search_terms:
+            search_terms.append(syn_val.lower())
+    keyword_docs = [n for n in DOC_ORDER if n != "생활안내"]
+    matched: list[dict] = []
+    for doc_name in keyword_docs:
+        arts = get_articles(doc_name, pdf_texts[doc_name])
+        doc_matched = []
+        for a in arts:
+            tl = a["title"].lower()
+            cl = a["content"].lower()
+            if any(t in tl for t in search_terms):
+                doc_matched.append(a)
+            elif any(t in cl for t in search_terms):
+                doc_matched.append(a)
+        matched.extend(doc_matched[:50])
+    return matched, search_terms
 
-# ══════════════════════════════════════════
-# 키워드 검색
-# ══════════════════════════════════════════
-if st.session_state.search_mode == "keyword":
-    if st.session_state.pop("_keyword_clear", False):
-        st.session_state["keyword_input"] = ""
-    keyword = st.text_input(
-        "검색어", placeholder="예: 층간소음, 주차 위반, 이용 시간",
-        label_visibility="collapsed", key="keyword_input",
+# ─────────────────────────────────────────
+# 10-b. AI 프롬프트 빌더 + 채팅 UI 헬퍼
+# ─────────────────────────────────────────
+def build_prompt(doc_name: str, context: str, question: str) -> str:
+    if doc_name == "생활안내":
+        return (
+            f"[입주 생활안내 내용]\n{context}\n\n"
+            f"[질문]\n{question}\n\n"
+            "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
+            "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
+            "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 출처 명시 (필수):\n"
+            "   예: 📌 생활안내 > 쓰레기 분리배출 요령\n"
+            "3. 안내문에 없는 내용이면 '해당 안내문에서 찾을 수 없습니다'라고만 답변\n"
+            "출처 없이 답변을 끝내지 마시오."
+        )
+    else:
+        fee_block = (
+            f"\n\n[주차 요금표 별표1 — 직접 데이터]\n{_PARKING_FEE_SUPPLEMENT}"
+            if doc_name == "주차규약" else ""
+        )
+        return (
+            f"[규약 전문]\n{context}{fee_block}\n\n"
+            f"[질문]\n{question}\n\n"
+            "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
+            "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
+            "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 근거 명시 (필수):\n"
+            "   - 조항인 경우: 📌 관리규약 제N조 또는 📌 주차규약 제N조 또는 📌 커뮤니티센터 규약 제N조\n"
+            "   - 별표인 경우: 📌 주차규약 별표 N\n"
+            "   - 첨부인 경우: 📌 커뮤니티센터 규약 첨부 #N\n"
+            "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
+            "4. 근거 뒤에 항목번호(가., ①, ② 등)는 붙이지 마시오\n"
+            "5. 주차 요금 질문 시 [주차 요금표 별표1] 데이터를 반드시 활용하여 구체적인 금액을 계산해 답변\n"
+            "6. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
+            "근거 없이 답변을 끝내지 마시오."
+        )
+
+def _user_bubble(text: str) -> None:
+    st.markdown(
+        f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
+        f'<div style="background:#4f68e8;color:#fff;border-radius:16px 16px 4px 16px;'
+        f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
+        f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
+        unsafe_allow_html=True,
     )
 
-    # 키워드 검색은 규약 문서만 대상
-    keyword_docs = [n for n in DOC_ORDER if n != "생활안내"]
+def _render_assistant_message(m: dict) -> None:
+    if m.get("error"):
+        st.error(m["text"])
+        return
+    body, cites = split_body_and_citations(m["text"])
+    st.markdown("\n".join(body).rstrip())
+    if cites:
+        st.markdown("")
+        st.markdown("\n".join(cites))
+    if m.get("articles"):
+        with st.expander("📋 관련 내용 원문 보기", expanded=False):
+            for art in m["articles"]:
+                render_article_card(art)
 
-    if keyword:
-        # 동의어 확장: 입력 키워드 + 매핑된 규약 원문 용어
-        search_terms = [keyword.lower()]
-        for syn_key, syn_val in _SYNONYMS.items():
-            if syn_key in keyword and syn_val.lower() not in search_terms:
-                search_terms.append(syn_val.lower())
+# ─────────────────────────────────────────
+# 11. 홈 화면 vs 대화 화면
+# ─────────────────────────────────────────
+_mode     = st.session_state.search_mode
+_selected = st.session_state.selected_doc
+_in_chat  = st.session_state.get("in_chat", False)
 
-        PER_DOC_LIMIT = 50
-        matched: list[dict] = []
-        total_found = 0
-        for doc_name in keyword_docs:
-            arts = get_articles(doc_name, pdf_texts[doc_name])
-            doc_matched = []
-            for a in arts:
-                title_l = a["title"].lower()
-                content_l = a["content"].lower()
-                if any(t in title_l for t in search_terms):
-                    doc_matched.append(a)
-                elif any(t in content_l for t in search_terms):
-                    doc_matched.append(a)
-            total_found += len(doc_matched)
-            matched.extend(doc_matched[:PER_DOC_LIMIT])
+if not _in_chat:
+    # ── 홈 화면: 인사말 + 빠른 실행 칩 ──
+    st.markdown(
+        "<div class='home-greeting'>"
+        "<h1>입주민님, 안녕하세요</h1>"
+        "<p>무엇을 도와드릴까요?</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-        if not matched:
-            st.warning(f"**'{keyword}'** 에 해당하는 조항을 찾지 못했습니다.")
-        else:
-            if total_found > len(matched):
-                st.success(f"총 **{total_found}개** 중 상위 **{len(matched)}개** 조항 표시")
-            else:
-                st.success(f"총 **{len(matched)}개** 조항 발견")
-            st.divider()
-            for art in matched:
-                render_article_card(art, highlights=search_terms)
+    # 키워드 통합검색 칩 (full-width)
+    _, _cc, _ = st.columns([1, 8, 1])
+    with _cc:
+        _kw_active = (_mode == "keyword")
+        if st.button(
+            "🔎  키워드 통합검색",
+            key="chip_kw",
+            use_container_width=True,
+            type="primary" if _kw_active else "secondary",
+        ):
+            st.session_state.search_mode = "keyword"
+            st.rerun()
 
-# ══════════════════════════════════════════
-# AI 질문 검색
-# ══════════════════════════════════════════
-else:
-    if not api_ready:
-        st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
-        st.stop()
+    st.markdown("<div style='margin:0.4rem 0'></div>", unsafe_allow_html=True)
 
-    # 문서 선택 버튼: 4등분 균일 너비
-    _dcols = st.columns(4)
+    # 문서 칩 (2열 그리드)
+    _, _dc1, _dc2, _ = st.columns([1, 4, 4, 1])
     for _di, _doc in enumerate(DOC_ORDER):
-        with _dcols[_di]:
-            _active = st.session_state.selected_doc == _doc
+        _col = _dc1 if _di % 2 == 0 else _dc2
+        with _col:
+            _is_sel = (_mode == "ai" and _selected == _doc)
             if st.button(
                 _doc,
-                key=f"dsel_{_doc}",
-                type="primary" if _active else "secondary",
+                key=f"chip_doc_{_doc}",
                 use_container_width=True,
-            ) and not _active:
+                type="primary" if _is_sel else "secondary",
+            ):
+                st.session_state.search_mode = "ai"
                 st.session_state.selected_doc = _doc
                 st.rerun()
 
-    selected = st.session_state.selected_doc
+    st.markdown("<div style='margin:1.5rem 0'></div>", unsafe_allow_html=True)
 
-    # 문서별 독립 대화 이력
-    if "messages_by_doc" not in st.session_state:
-        st.session_state.messages_by_doc = {}
-    if selected not in st.session_state.messages_by_doc:
-        st.session_state.messages_by_doc[selected] = []
-    msgs: list[dict] = st.session_state.messages_by_doc[selected]
-
-    # 문서별 시스템 프롬프트 분기
-    def build_prompt(doc_name: str, context: str, question: str) -> str:
-        if doc_name == "생활안내":
-            return (
-                f"[입주 생활안내 내용]\n{context}\n\n"
-                f"[질문]\n{question}\n\n"
-                "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
-                "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
-                "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 출처 명시 (필수):\n"
-                "   예: 📌 생활안내 > 쓰레기 분리배출 요령\n"
-                "3. 안내문에 없는 내용이면 '해당 안내문에서 찾을 수 없습니다'라고만 답변\n"
-                "출처 없이 답변을 끝내지 마시오."
-            )
+else:
+    # ── 대화 화면 ──
+    if _mode == "keyword":
+        _kw_results = st.session_state.get("keyword_results", [])
+        _kw_query   = st.session_state.get("keyword_query", "")
+        _kw_terms   = st.session_state.get("keyword_terms", [])
+        if _kw_results:
+            st.success(f"**'{_kw_query}'** — 총 **{len(_kw_results)}개** 조항 발견")
+            st.divider()
+            for _art in _kw_results:
+                render_article_card(_art, highlights=_kw_terms)
         else:
-            fee_block = (
-                f"\n\n[주차 요금표 별표1 — 직접 데이터]\n{_PARKING_FEE_SUPPLEMENT}"
-                if doc_name == "주차규약" else ""
-            )
-            return (
-                f"[규약 전문]\n{context}{fee_block}\n\n"
-                f"[질문]\n{question}\n\n"
-                "위 질문에 답변하되, 반드시 다음 규칙을 따라:\n"
-                "1. 헤더(#, ##) 없이 **볼드**와 목록(-)만 사용해서 친근하고 자연스러운 말투로 답변\n"
-                "2. 답변 마지막에 반드시 빈 줄 하나 띄운 뒤 새 줄에 📌 로 시작하는 근거 명시 (필수):\n"
-                "   - 조항인 경우: 📌 관리규약 제N조 또는 📌 주차규약 제N조 또는 📌 커뮤니티센터 규약 제N조\n"
-                "   - 별표인 경우: 📌 주차규약 별표 N\n"
-                "   - 첨부인 경우: 📌 커뮤니티센터 규약 첨부 #N\n"
-                "3. 규약 이름은 반드시 '관리규약', '주차규약', '커뮤니티센터 규약' 중 하나만 사용\n"
-                "4. 근거 뒤에 항목번호(가., ①, ② 등)는 붙이지 마시오\n"
-                "5. 주차 요금 질문 시 [주차 요금표 별표1] 데이터를 반드시 활용하여 구체적인 금액을 계산해 답변\n"
-                "6. 규약에 없으면 '해당 규약에서 찾을 수 없습니다'라고만 답변\n"
-                "근거 없이 답변을 끝내지 마시오."
-            )
+            st.info("검색 결과가 없습니다. 다른 키워드로 검색해 보세요.")
 
-    _PLACEHOLDERS = {
-        "주차규약": "예: 방문차량 무료 주차는 몇 시간까지야?",
-        "커뮤니티센터 규약": "예: 헬스장 이용시간이 어떻게 돼?",
-        "관리규약": "예: 동대표 자격요건이 뭐야?",
-        "생활안내": "예: 쓰레기 분리수거는 어떻게 해?",
-    }
+    else:
+        # AI 대화
+        if not api_ready:
+            st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
+            st.stop()
 
-    def _render_assistant_message(m: dict) -> None:
-        if m.get("error"):
-            st.error(m["text"])
-            return
-        body, cites = split_body_and_citations(m["text"])
-        st.markdown("\n".join(body).rstrip())
-        if cites:
-            st.markdown("")
-            st.markdown("\n".join(cites))
-        if m.get("articles"):
-            with st.expander("📋 관련 내용 원문 보기", expanded=False):
-                for art in m["articles"]:
-                    render_article_card(art)
+        if "messages_by_doc" not in st.session_state:
+            st.session_state.messages_by_doc = {}
+        if _selected not in st.session_state.messages_by_doc:
+            st.session_state.messages_by_doc[_selected] = []
+        _msgs: list[dict] = st.session_state.messages_by_doc[_selected]
 
-    prompt = st.chat_input(_PLACEHOLDERS.get(selected, "질문을 입력하세요"))
-
-    def _user_bubble(text: str) -> None:
-        st.markdown(
-            f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
-            f'<div style="background:#4f68e8;color:#fff;border-radius:16px 16px 4px 16px;'
-            f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
-            f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
-            unsafe_allow_html=True,
-        )
-
-    if prompt:
-        # 스트리밍 중엔 현재 Q&A만 표시 (이력 렌더 없음 → DOM 충돌 방지)
-        _user_bubble(prompt)
-
-        response_text = None
-        related: list[dict] = []
-        last_err = ""
-
-        # 컨테이너를 미리 확보: 새 답변(위) → 이전 이력(아래) 순서 고정
-        asst_container = st.container()
-        hist_container = st.container()
-
-        # 이전 이력을 즉시 렌더 (스트리밍 중에도 사라지지 않음)
-        old_pairs = [
-            (msgs[i], msgs[i + 1])
-            for i in range(0, len(msgs) - 1, 2)
-            if i + 1 < len(msgs)
-        ]
-        with hist_container:
-            for user_m, asst_m in reversed(old_pairs):
-                _user_bubble(user_m["text"])
+        if _msgs:
+            _pairs = [
+                (_msgs[i], _msgs[i + 1])
+                for i in range(0, len(_msgs) - 1, 2)
+                if i + 1 < len(_msgs)
+            ]
+            for _user_m, _asst_m in reversed(_pairs):
+                _user_bubble(_user_m["text"])
                 with st.chat_message("assistant"):
-                    _render_assistant_message(asst_m)
+                    _render_assistant_message(_asst_m)
+        else:
+            st.markdown(
+                f"<div style='text-align:center;color:#aaa;padding:2.5rem 0'>"
+                f"<div style='font-size:2rem;margin-bottom:0.5rem'>💬</div>"
+                f"<div style='font-size:0.9rem'><b>{_selected}</b>에 대해 질문하세요</div></div>",
+                unsafe_allow_html=True,
+            )
 
-        # 새 답변 스트리밍
-        with asst_container:
-            with st.chat_message("assistant"):
-                placeholder = st.empty()
-                placeholder.markdown("_답변을 생성하는 중입니다..._")
-                try:
-                    all_arts = get_articles(selected, pdf_texts[selected])
-                    context  = get_context_for_ai(selected, prompt, all_arts)
-                    full_p   = build_prompt(selected, context, prompt)
-                    cache_key = (selected, prompt.strip())
-                    _entry = _RESPONSE_CACHE.get(cache_key)
-                    cached = _entry[0] if (_entry and time.time() - _entry[1] < _CACHE_TTL) else None
+# ─────────────────────────────────────────
+# 12. 하단 입력 영역
+# ─────────────────────────────────────────
+_mode     = st.session_state.search_mode
+_selected = st.session_state.selected_doc
 
-                    if cached is not None:
-                        response_text = cached
-                    else:
-                        accumulated = ""
-                        for chunk in ai_generate_smart_stream(full_p):
-                            accumulated += chunk
-                            placeholder.markdown(accumulated + " ▌")
-                        if not accumulated.strip():
-                            raise RuntimeError("빈 응답")
-                        response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", accumulated)
-                        response_text = _collapse_citations(response_text)
-                        _RESPONSE_CACHE[cache_key] = (response_text, time.time())
+# 모드 버튼 행
+_mc1, _mc2, _mc3 = st.columns([1.4, 1.8, 6.8])
+with _mc1:
+    if st.button(
+        "🔎 키워드검색",
+        key="mode_kw",
+        type="primary" if _mode == "keyword" else "secondary",
+    ):
+        st.session_state.search_mode = "keyword"
+        st.rerun()
+with _mc2:
+    with st.popover("✦ AI 검색 ▾"):
+        st.markdown(f"**현재 선택:** {_selected}")
+        st.divider()
+        for _doc in DOC_ORDER:
+            if st.button(
+                _doc,
+                key=f"pop_{_doc}",
+                use_container_width=True,
+                type="primary" if (_doc == _selected and _mode == "ai") else "secondary",
+            ):
+                st.session_state.search_mode = "ai"
+                st.session_state.selected_doc = _doc
+                st.rerun()
 
-                    body, cites = split_body_and_citations(response_text)
-                    final = "\n".join(body).rstrip()
-                    if cites:
-                        final += "\n\n" + "\n".join(cites)
-                    placeholder.markdown(final)
+# 통합 입력창
+_PLACEHOLDERS = {
+    "주차규약":         "예: 방문차량 무료 주차는 몇 시간까지야?",
+    "커뮤니티센터 규약": "예: 헬스장 이용시간이 어떻게 돼?",
+    "관리규약":         "예: 동대표 자격요건이 뭐야?",
+    "생활안내":         "예: 쓰레기 분리수거는 어떻게 해?",
+}
+_ph = "키워드를 입력하세요..." if _mode == "keyword" else _PLACEHOLDERS.get(_selected, "질문을 입력하세요")
 
-                    related = [] if selected == "생활안내" else find_related_articles(
-                        response_text, all_arts, selected
-                    )
-                except Exception as e:
-                    last_err = friendly_error_message(e)
-                    placeholder.markdown(last_err)
+if _prompt := st.chat_input(_ph):
+    st.session_state.in_chat = True
 
-        if response_text:
-            msgs.append({"role": "user", "text": prompt})
-            msgs.append({"role": "assistant", "text": response_text, "articles": related})
-        elif last_err:
-            msgs.append({"role": "user", "text": prompt})
-            msgs.append({"role": "assistant", "text": last_err, "articles": [], "error": True})
-
+    if _mode == "keyword":
+        _results, _terms = run_keyword_search(_prompt)
+        st.session_state.keyword_results = _results
+        st.session_state.keyword_query   = _prompt
+        st.session_state.keyword_terms   = _terms
         st.rerun()
 
     else:
-        # 이력 전체를 최신순(역순 쌍)으로 렌더
-        pairs = [
-            (msgs[i], msgs[i + 1])
-            for i in range(0, len(msgs) - 1, 2)
-            if i + 1 < len(msgs)
+        if not api_ready:
+            st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
+            st.stop()
+
+        if "messages_by_doc" not in st.session_state:
+            st.session_state.messages_by_doc = {}
+        if _selected not in st.session_state.messages_by_doc:
+            st.session_state.messages_by_doc[_selected] = []
+        _msgs = st.session_state.messages_by_doc[_selected]
+
+        _user_bubble(_prompt)
+        _response_text = None
+        _related: list[dict] = []
+        _last_err = ""
+
+        _asst_container = st.container()
+        _hist_container = st.container()
+
+        _old_pairs = [
+            (_msgs[i], _msgs[i + 1])
+            for i in range(0, len(_msgs) - 1, 2)
+            if i + 1 < len(_msgs)
         ]
-        for idx, (user_m, asst_m) in enumerate(reversed(pairs)):
-            _user_bubble(user_m["text"])
+        with _hist_container:
+            for _um, _am in reversed(_old_pairs):
+                _user_bubble(_um["text"])
+                with st.chat_message("assistant"):
+                    _render_assistant_message(_am)
+
+        with _asst_container:
             with st.chat_message("assistant"):
-                _render_assistant_message(asst_m)
+                _ph_el = st.empty()
+                _ph_el.markdown("_답변을 생성하는 중입니다..._")
+                try:
+                    _all_arts = get_articles(_selected, pdf_texts[_selected])
+                    _context  = get_context_for_ai(_selected, _prompt, _all_arts)
+                    _full_p   = build_prompt(_selected, _context, _prompt)
+                    _cache_key = (_selected, _prompt.strip())
+                    _entry = _RESPONSE_CACHE.get(_cache_key)
+                    _cached = _entry[0] if (_entry and time.time() - _entry[1] < _CACHE_TTL) else None
+
+                    if _cached is not None:
+                        _response_text = _cached
+                    else:
+                        _accumulated = ""
+                        for _chunk in ai_generate_smart_stream(_full_p):
+                            _accumulated += _chunk
+                            _ph_el.markdown(_accumulated + " ▌")
+                        if not _accumulated.strip():
+                            raise RuntimeError("빈 응답")
+                        _response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", _accumulated)
+                        _response_text = _collapse_citations(_response_text)
+                        _RESPONSE_CACHE[_cache_key] = (_response_text, time.time())
+
+                    _body, _cites = split_body_and_citations(_response_text)
+                    _final = "\n".join(_body).rstrip()
+                    if _cites:
+                        _final += "\n\n" + "\n".join(_cites)
+                    _ph_el.markdown(_final)
+
+                    _related = [] if _selected == "생활안내" else find_related_articles(
+                        _response_text, _all_arts, _selected
+                    )
+                except Exception as _e:
+                    _last_err = friendly_error_message(_e)
+                    _ph_el.markdown(_last_err)
+
+        if _response_text:
+            _msgs.append({"role": "user", "text": _prompt})
+            _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
+        elif _last_err:
+            _msgs.append({"role": "user", "text": _prompt})
+            _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
+
+        st.rerun()
