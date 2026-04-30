@@ -20,150 +20,134 @@ st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_ico
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
 
-/* ── 폰트 ── */
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stChatMessage"] p,
-[data-testid="stChatMessage"] li,
-[data-testid="stChatInput"] textarea,
-[data-testid="stTextInput"] input {
+/* ── 전체 배경 (Gemini 스타일 연한 blue-gray) ── */
+.stApp, [data-testid="stAppViewContainer"], section[data-testid="stMain"] {
+    background: #f0f4f9 !important;
+}
+.main .block-container {
+    background: transparent !important;
+    padding-top: 0 !important;
+    max-width: 760px !important;
+}
+[data-testid="stMainBlockContainer"] { padding-top: 0.5rem !important; }
+.st-emotion-cache-zy6yx3 { padding-top: 0.5rem !important; }
+
+/* ── 전체 폰트 ── */
+html, body, * {
     font-family: 'Noto Sans KR', sans-serif !important;
 }
 
-/* ── 탭: 언더라인 스타일 ── */
-[data-baseweb="tab-list"] {
-    gap: 0 !important;
-    border-bottom: 2px solid #e8eaf0 !important;
-    background: transparent !important;
-}
-[data-baseweb="tab"] {
-    font-family: 'Noto Sans KR', sans-serif !important;
-    font-size: 0.88rem !important;
-    font-weight: 500 !important;
-    color: #999 !important;
-    padding: 10px 22px !important;
-    background: transparent !important;
-    border: none !important;
-}
-[aria-selected="true"][data-baseweb="tab"] { color: #2563eb !important; font-weight: 600 !important; }
-[data-baseweb="tab-highlight"] { background-color: #2563eb !important; height: 2px !important; }
-[data-baseweb="tab-border"] { display: none !important; }
-[data-testid="stTabsTabPanel"] { padding-top: 1rem !important; }
-
-/* ── 버튼: 필 모양 (Streamlit 버전별 셀렉터 전수 적용) ── */
+/* ── 모든 버튼 기본: 칩 스타일 (Gemini 스타일) ── */
 [data-testid="stButton"] button,
 [data-testid="baseButton-primary"],
 [data-testid="baseButton-secondary"],
 [data-testid="stBaseButton-primary"],
 [data-testid="stBaseButton-secondary"],
 .stButton > button {
-    border-radius: 20px !important;
-    padding: 0.35rem 1.1rem !important;
+    border-radius: 12px !important;
     font-family: 'Noto Sans KR', sans-serif !important;
-    font-size: 0.83rem !important;
+    font-size: 0.9rem !important;
     font-weight: 500 !important;
     min-height: 0 !important;
-    transition: all .15s !important;
+    transition: background 0.15s !important;
+    text-align: left !important;
 }
-[data-testid="stButton"] button p,
-[data-testid="baseButton-secondary"] p,
-[data-testid="stBaseButton-secondary"] p { font-size: 0.83rem !important; }
 
-/* ── 문서 선택 버튼: primary=선택(녹색), secondary=미선택 ── */
+/* ── secondary 버튼 = Gemini 제안 칩 ── */
+[data-testid="stBaseButton-secondary"],
+[data-testid="baseButton-secondary"],
+[data-testid="stButton"] button[kind="secondary"] {
+    background: #e8edf8 !important;
+    border: none !important;
+    color: #1f2937 !important;
+    padding: 0.6rem 1.3rem !important;
+    box-shadow: none !important;
+}
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="baseButton-secondary"]:hover {
+    background: #dde3f2 !important;
+}
+[data-testid="stBaseButton-secondary"] p,
+[data-testid="baseButton-secondary"] p,
+[data-testid="stBaseButton-secondary"] span,
+[data-testid="baseButton-secondary"] span {
+    font-size: 0.9rem !important;
+    color: #1f2937 !important;
+}
+
+/* ── primary 버튼 = 선택된 상태 (파란색) ── */
 [data-testid="stBaseButton-primary"],
 [data-testid="baseButton-primary"] {
-    background: #16a34a !important;
-    border-color: #16a34a !important;
+    background: #1a73e8 !important;
+    border: none !important;
     color: white !important;
-    font-weight: 600 !important;
+    padding: 0.6rem 1.3rem !important;
+    box-shadow: none !important;
+}
+[data-testid="stBaseButton-primary"]:hover,
+[data-testid="baseButton-primary"]:hover {
+    background: #1558b0 !important;
 }
 [data-testid="stBaseButton-primary"] p,
 [data-testid="baseButton-primary"] p,
 [data-testid="stBaseButton-primary"] span,
-[data-testid="baseButton-primary"] span { color: white !important; font-weight: 600 !important; }
-[data-testid="stBaseButton-secondary"],
-[data-testid="baseButton-secondary"] {
-    background: transparent !important;
-    border-color: #d0d4e0 !important;
-    color: #555 !important;
-}
-@media (prefers-color-scheme: dark) {
-    [data-testid="stBaseButton-primary"],
-    [data-testid="baseButton-primary"] { background: #22c55e !important; border-color: #22c55e !important; }
-    [data-testid="stBaseButton-secondary"],
-    [data-testid="baseButton-secondary"] { background: transparent !important; border-color: #3a3b4e !important; color: #8888aa !important; }
-    [data-testid="stBaseButton-secondary"] p,
-    [data-testid="baseButton-secondary"] p { color: #8888aa !important; }
+[data-testid="baseButton-primary"] span {
+    color: white !important;
+    font-weight: 600 !important;
 }
 
-/* ── AI 답변 박스 (사용자 메시지는 HTML로 직접 렌더) ── */
+/* ── AI 답변 박스 ── */
 [data-testid="stChatMessage"] {
     background: #ffffff !important;
-    border: 1px solid #e8eaf0 !important;
+    border: 1px solid #e0e6f0 !important;
     border-radius: 14px !important;
     padding: 1rem 1.2rem !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
     gap: 0 !important;
 }
-@media (prefers-color-scheme: dark) {
-    [data-testid="stChatMessage"] {
-        background: #1c1d28 !important;
-        border-color: #2a2b3a !important;
-        box-shadow: none !important;
-    }
-}
+[data-testid="stChatMessageAvatarAssistant"] { display: none !important; }
+[data-testid="stChatMessage"] p { font-size: 0.88rem !important; line-height: 1.75 !important; margin-bottom: 0.4rem !important; }
+[data-testid="stChatMessage"] li { font-size: 0.88rem !important; line-height: 1.75 !important; margin-bottom: 0.3rem !important; }
+[data-testid="stChatMessage"] ul, [data-testid="stChatMessage"] ol { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
 
-/* ── 검색 입력창 (이중 테두리 방지) ── */
-[data-testid="stTextInput"] [data-baseweb="input"] {
-    border-radius: 10px !important;
-    border: 1.5px solid #e2e6ea !important;
-    box-shadow: none !important;
-    transition: border-color .15s, box-shadow .15s !important;
+/* ── 채팅 입력창: Gemini 스타일 큰 카드 ── */
+[data-testid="stBottom"] {
+    background: transparent !important;
+    padding: 0 0 12px !important;
 }
-[data-testid="stTextInput"] [data-baseweb="input"]:focus-within {
-    border-color: #4f68e8 !important;
-    box-shadow: 0 0 0 2px rgba(79,104,232,0.12) !important;
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] {
+    border-radius: 26px !important;
+    border: 1px solid #c8cdd8 !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
+    padding: 10px 16px !important;
+    transition: box-shadow 0.2s !important;
 }
-[data-testid="stTextInput"] input {
+[data-testid="stChatInput"] > div:focus-within,
+[data-testid="stChatInputContainer"]:focus-within {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+    border-color: #a0aabd !important;
+}
+[data-testid="stChatInput"] textarea {
+    font-size: 0.95rem !important;
+    line-height: 1.5 !important;
+    color: #1a1a2e !important;
+    background: transparent !important;
     border: none !important;
     outline: none !important;
-    box-shadow: none !important;
-    font-size: 0.9rem !important;
-    padding: 10px 14px !important;
-    background: transparent !important;
+    padding: 4px 0 !important;
+    min-height: 30px !important;
+    font-family: 'Noto Sans KR', sans-serif !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #9aa0b0 !important;
 }
 
-/* ── 채팅 입력창 ── */
-[data-testid="stChatInput"] textarea {
-    border-radius: 12px !important;
-    font-size: 0.88rem !important;
-}
-[data-testid="stChatInput"] > div {
-    border-radius: 12px !important;
-    border-color: #e2e6ea !important;
-}
-@media (prefers-color-scheme: dark) {
-    [data-testid="stChatInput"] > div { border-color: #3a3b4e !important; }
-}
-
-/* ── 채팅 아바타 숨김 ── */
-[data-testid="stChatMessageAvatarAssistant"] { display: none !important; }
-[data-testid="stChatMessage"] p { font-size: 0.85rem !important; line-height: 1.7 !important; margin-bottom: 0.4rem !important; }
-[data-testid="stChatMessage"] li { font-size: 0.85rem !important; margin-bottom: 0.3rem !important; line-height: 1.7 !important; }
-[data-testid="stChatMessage"] ul,
-[data-testid="stChatMessage"] ol { margin-top: 0.4rem !important; margin-bottom: 0.4rem !important; }
-
-/* ── 다크모드: 탭 ── */
-@media (prefers-color-scheme: dark) {
-    [data-baseweb="tab-list"] { border-bottom-color: #2a2b3a !important; }
-    [data-baseweb="tab"] { color: #666880 !important; }
-    [aria-selected="true"][data-baseweb="tab"] { color: #7b9ef7 !important; }
-    [data-baseweb="tab-highlight"] { background-color: #7b9ef7 !important; }
-    [data-testid="stTextInput"] input { border-color: #2e2f3e !important; }
-    [data-testid="stTextInput"] input:focus { border-color: #7b9ef7 !important; box-shadow: 0 0 0 3px rgba(123,158,247,0.1) !important; }
-}
+/* ── 구분선 ── */
+hr { margin-top: 0.2rem !important; margin-bottom: 0.8rem !important; opacity: 0.25 !important; }
 
 /* ── 불필요 UI 숨김 ── */
 [class*="profilePreview"] { display: none !important; }
@@ -174,44 +158,58 @@ st.markdown("""
 header [data-testid="stToolbar"] { display: none !important; }
 header { display: none !important; }
 
-/* ── 상단 여백 ── */
-.main .block-container { padding-top: 0 !important; max-width: 720px !important; }
-[data-testid="stMainBlockContainer"] { padding-top: 0.3rem !important; }
-.st-emotion-cache-zy6yx3 { padding-top: 0.3rem !important; }
-hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
+/* ── 팝오버 ── */
+[data-testid="stPopover"] { border-radius: 14px !important; }
 
-/* ── 홈 화면 ── */
-.home-greeting { text-align:center; padding:2.5rem 0 1.5rem; }
-.home-greeting h1 { font-size:1.9rem; font-weight:700; color:#1a1a1a; letter-spacing:-0.5px; margin-bottom:0.3rem; }
-.home-greeting p { font-size:1.05rem; color:#888; margin:0; }
+/* ── 다크모드 ── */
 @media (prefers-color-scheme: dark) {
-    .home-greeting h1 { color:#d8daf0; }
-    .home-greeting p { color:#666880; }
+    .stApp, [data-testid="stAppViewContainer"], section[data-testid="stMain"] { background: #1a1c2a !important; }
+    [data-testid="stBaseButton-secondary"], [data-testid="baseButton-secondary"] {
+        background: #262838 !important; color: #c8ccdd !important;
+    }
+    [data-testid="stBaseButton-secondary"]:hover, [data-testid="baseButton-secondary"]:hover { background: #2e3045 !important; }
+    [data-testid="stBaseButton-secondary"] p, [data-testid="baseButton-secondary"] p,
+    [data-testid="stBaseButton-secondary"] span, [data-testid="baseButton-secondary"] span { color: #c8ccdd !important; }
+    [data-testid="stChatMessage"] { background: #1c1d2c !important; border-color: #2a2c3e !important; }
+    [data-testid="stChatInput"] > div, [data-testid="stChatInputContainer"] {
+        background: #1e2030 !important; border-color: #3a3d52 !important;
+    }
+    [data-testid="stChatInput"] textarea { color: #d8daf0 !important; }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# 헤더
+# ── 헤더: 순수 HTML로 렌더 (Gemini 스타일 nav) ──
 try:
     with open("logo.png", "rb") as f:
         _logo_b64 = base64.b64encode(f.read()).decode()
     _logo_sm = (
         f"<img src='data:image/png;base64,{_logo_b64}' "
-        "style='width:32px;height:32px;object-fit:contain;vertical-align:middle;pointer-events:none;'>"
+        "style='width:28px;height:28px;object-fit:contain;vertical-align:middle;'>"
     )
 except Exception:
-    _logo_sm = "<span style='font-size:1.4rem;vertical-align:middle'>🏰</span>"
+    _logo_sm = "<span style='font-size:1.3rem;vertical-align:middle'>🏰</span>"
 
-_hcol1, _hcol2 = st.columns([0.6, 9.4])
-with _hcol1:
-    st.markdown(f"<div style='padding-top:6px'>{_logo_sm}</div>", unsafe_allow_html=True)
-with _hcol2:
-    if st.button("원당역 롯데캐슬스카이엘", key="home_btn", type="secondary"):
-        for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
-            st.session_state.pop(_k, None)
-        st.session_state.search_mode = "ai"
-        st.rerun()
-st.markdown("<hr style='margin:0.4rem 0 0.6rem'>", unsafe_allow_html=True)
+_in_chat_now = st.session_state.get("in_chat", False)
+
+_hcol_title, _hcol_btn = st.columns([8, 2])
+with _hcol_title:
+    st.markdown(
+        f"<div style='display:flex;align-items:center;gap:10px;padding:10px 0 6px'>"
+        f"{_logo_sm}"
+        f"<span style='font-size:1.1rem;font-weight:700;color:#1a1a2e;letter-spacing:-0.3px;'"
+        f">원당역 롯데캐슬스카이엘</span></div>",
+        unsafe_allow_html=True,
+    )
+with _hcol_btn:
+    if _in_chat_now:
+        if st.button("← 홈으로", key="home_btn", type="secondary"):
+            for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
+                st.session_state.pop(_k, None)
+            st.session_state.search_mode = "ai"
+            st.rerun()
+
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # ⚙️ 컨텍스트 압축 설정
@@ -1067,47 +1065,49 @@ _selected = st.session_state.selected_doc
 _in_chat  = st.session_state.get("in_chat", False)
 
 if not _in_chat:
-    # ── 홈 화면: 인사말 + 빠른 실행 칩 ──
+    # ── 홈 화면: Gemini 스타일 좌측 인사말 + 세로 칩 ──
     st.markdown(
-        "<div class='home-greeting'>"
-        "<h1>입주민님, 안녕하세요</h1>"
-        "<p>무엇을 도와드릴까요?</p>"
+        "<div style='padding:2.2rem 0 1.8rem'>"
+        "<p style='font-size:0.95rem;color:#5f6b7a;margin:0 0 0.4rem;font-weight:400'>"
+        "입주민님, 안녕하세요</p>"
+        "<p style='font-size:1.85rem;font-weight:700;color:#1a1a2e;line-height:1.3;"
+        "letter-spacing:-0.5px;margin:0'>"
+        "규약 검색, AI 질문으로<br>무엇이든 도와드리겠습니다.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
 
-    # 키워드 통합검색 칩 (full-width)
-    _, _cc, _ = st.columns([1, 8, 1])
-    with _cc:
-        _kw_active = (_mode == "keyword")
-        if st.button(
-            "🔎  키워드 통합검색",
-            key="chip_kw",
-            use_container_width=True,
-            type="primary" if _kw_active else "secondary",
-        ):
-            st.session_state.search_mode = "keyword"
-            st.rerun()
-
-    st.markdown("<div style='margin:0.4rem 0'></div>", unsafe_allow_html=True)
-
-    # 문서 칩 (2열 그리드)
-    _, _dc1, _dc2, _ = st.columns([1, 4, 4, 1])
-    for _di, _doc in enumerate(DOC_ORDER):
-        _col = _dc1 if _di % 2 == 0 else _dc2
-        with _col:
-            _is_sel = (_mode == "ai" and _selected == _doc)
+    # 칩 목록 (Gemini 스타일: 세로 단일 컬럼, 좌측 정렬, 아이콘 포함)
+    _chips = [
+        ("🔎  키워드 통합검색",   "chip_kw",           "keyword", None),
+        ("🚗  주차 규약",         "chip_주차규약",      "ai",      "주차규약"),
+        ("🏢  커뮤니티센터 규약", "chip_커뮤니티센터 규약", "ai", "커뮤니티센터 규약"),
+        ("📋  관리 규약",         "chip_관리규약",      "ai",      "관리규약"),
+        ("📌  생활안내",          "chip_생활안내",      "ai",      "생활안내"),
+    ]
+    _chip_col, _ = st.columns([0.62, 0.38])
+    with _chip_col:
+        for _label, _key, _cmode, _cdoc in _chips:
+            if _cdoc and _cdoc not in DOC_ORDER:
+                continue
+            _is_active = (
+                (_cmode == "keyword" and _mode == "keyword")
+                if _cdoc is None
+                else (_mode == "ai" and _selected == _cdoc)
+            )
             if st.button(
-                _doc,
-                key=f"chip_doc_{_doc}",
+                _label,
+                key=_key,
                 use_container_width=True,
-                type="primary" if _is_sel else "secondary",
+                type="primary" if _is_active else "secondary",
             ):
-                st.session_state.search_mode = "ai"
-                st.session_state.selected_doc = _doc
+                st.session_state.search_mode = _cmode
+                if _cdoc:
+                    st.session_state.selected_doc = _cdoc
                 st.rerun()
+            st.markdown("<div style='margin-bottom:0.35rem'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin:1.5rem 0'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin:1rem 0'></div>", unsafe_allow_html=True)
 
 else:
     # ── 대화 화면 ──
