@@ -1,4 +1,4 @@
- from typing import Iterator
+from typing import Iterator
  
  # 모듈 수준 공유 캐시 (모든 사용자 세션이 공유, TTL 1시간)
  _RESPONSE_CACHE: dict[tuple, tuple[str, float]] = {}
