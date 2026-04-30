@@ -16,7 +16,7 @@ import streamlit as st
 # ─────────────────────────────────────────
 # 페이지 설정
 # ─────────────────────────────────────────
-st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="wide", menu_items={})
+st.set_page_config(page_title="롯데캐슬스카이엘 규약 검색", page_icon="🏰", layout="centered", menu_items={})
 
 st.markdown("""
 <style>
@@ -175,32 +175,31 @@ header [data-testid="stToolbar"] { display: none !important; }
 header { display: none !important; }
 
 /* ── 상단 여백 ── */
-.main .block-container { padding-top: 0 !important; }
+.main .block-container { padding-top: 0 !important; max-width: 720px !important; }
 [data-testid="stMainBlockContainer"] { padding-top: 0.3rem !important; }
 .st-emotion-cache-zy6yx3 { padding-top: 0.3rem !important; }
 hr { margin-top: 0.3rem !important; margin-bottom: 0.8rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 헤더
+# 헤더 (중앙 정렬)
 try:
     with open("logo.png", "rb") as f:
         logo_b64 = base64.b64encode(f.read()).decode()
     logo_html = (
         f"<img src='data:image/png;base64,{logo_b64}' "
-        "style='width:36px;height:36px;object-fit:contain;"
-        "vertical-align:top;margin-right:10px;pointer-events:none;'>"
+        "style='width:60px;height:60px;object-fit:contain;margin-bottom:0.5rem;pointer-events:none;'>"
     )
 except Exception:
-    logo_html = "<span style='font-size:1.4rem;vertical-align:top;margin-right:8px'>🏰</span>"
+    logo_html = "<div style='font-size:3rem;margin-bottom:0.4rem'>🏰</div>"
 
 st.markdown(
-    f"""<div style='display:flex;align-items:flex-start;margin-bottom:12px'>
-    {logo_html}
-    <div style='line-height:1.2'>
-      <div style='font-size:1.1rem;font-weight:700'>롯데캐슬스카이엘 규약 통합 검색</div>
-      <div style='font-size:0.78rem;color:#999;margin-top:2px'>우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
-    </div></div>""",
+    f"""<div style='text-align:center;padding:2rem 0 0.6rem'>
+      {logo_html}
+      <div style='font-size:1.7rem;font-weight:700;color:#1a1a1a;letter-spacing:-0.3px'>롯데캐슬스카이엘</div>
+      <div style='font-size:1rem;font-weight:500;color:#555;margin-top:0.15rem'>규약 통합 검색</div>
+      <div style='font-size:0.8rem;color:#aaa;margin-top:0.5rem'>우리아파트 규약을 키워드 및 AI로 검색합니다.</div>
+    </div>""",
     unsafe_allow_html=True,
 )
 
@@ -287,6 +286,22 @@ DOC_ORDER = [n for n in ["주차규약", "커뮤니티센터 규약", "관리규
 
 if "selected_doc" not in st.session_state or st.session_state.selected_doc not in DOC_ORDER:
     st.session_state.selected_doc = DOC_ORDER[0]
+if "search_mode" not in st.session_state:
+    st.session_state.search_mode = "ai"
+
+# 모드 전환 pill 버튼
+_, _col_kw, _col_ai, _ = st.columns([2, 1, 1, 2])
+with _col_kw:
+    if st.button("🔎 키워드", use_container_width=True,
+                 type="primary" if st.session_state.search_mode == "keyword" else "secondary"):
+        st.session_state.search_mode = "keyword"
+        st.rerun()
+with _col_ai:
+    if st.button("✦ AI 검색", use_container_width=True,
+                 type="primary" if st.session_state.search_mode == "ai" else "secondary"):
+        st.session_state.search_mode = "ai"
+        st.rerun()
+st.markdown("<div style='margin-bottom:0.6rem'></div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 5. Gemini AI
@@ -966,14 +981,13 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
 </div>""")
 
 # ─────────────────────────────────────────
-# 11. 탭 구성
+# 11. 검색 모드별 화면
 # ─────────────────────────────────────────
-tab_keyword, tab_ai = st.tabs(["🔎 키워드 검색", "✦ AI 질문 검색"])
 
 # ══════════════════════════════════════════
-# TAB A — 키워드 검색 (규약 문서만)
+# 키워드 검색
 # ══════════════════════════════════════════
-with tab_keyword:
+if st.session_state.search_mode == "keyword":
     if st.session_state.pop("_keyword_clear", False):
         st.session_state["keyword_input"] = ""
     keyword = st.text_input(
@@ -1019,9 +1033,9 @@ with tab_keyword:
                 render_article_card(art, highlights=search_terms)
 
 # ══════════════════════════════════════════
-# TAB B — AI 질문 검색
+# AI 질문 검색
 # ══════════════════════════════════════════
-with tab_ai:
+else:
     if not api_ready:
         st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
         st.stop()
