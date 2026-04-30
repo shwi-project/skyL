@@ -29,7 +29,7 @@ st.markdown("""
 .main .block-container {
     background: transparent !important;
     padding-top: 0 !important;
-    max-width: 760px !important;
+    max-width: 780px !important;
 }
 [data-testid="stMainBlockContainer"] { padding-top: 0.5rem !important; }
 .st-emotion-cache-zy6yx3 { padding-top: 0.5rem !important; }
@@ -53,17 +53,19 @@ html, body, * {
     min-height: 0 !important;
     transition: background 0.15s !important;
     text-align: left !important;
+    justify-content: flex-start !important;
 }
 
 /* ── secondary 버튼 = Gemini 제안 칩 ── */
 [data-testid="stBaseButton-secondary"],
 [data-testid="baseButton-secondary"],
 [data-testid="stButton"] button[kind="secondary"] {
-    background: #e8edf8 !important;
+    background: #e9eef6 !important;
     border: none !important;
     color: #1f2937 !important;
-    padding: 0.6rem 1.3rem !important;
+    padding: 0.62rem 1.05rem !important;
     box-shadow: none !important;
+    border-radius: 999px !important;
 }
 [data-testid="stBaseButton-secondary"]:hover,
 [data-testid="baseButton-secondary"]:hover {
@@ -80,21 +82,22 @@ html, body, * {
 /* ── primary 버튼 = 선택된 상태 (파란색) ── */
 [data-testid="stBaseButton-primary"],
 [data-testid="baseButton-primary"] {
-    background: #1a73e8 !important;
+    background: #d3e3fd !important;
     border: none !important;
-    color: white !important;
-    padding: 0.6rem 1.3rem !important;
+    color: #174ea6 !important;
+    padding: 0.62rem 1.05rem !important;
     box-shadow: none !important;
+    border-radius: 999px !important;
 }
 [data-testid="stBaseButton-primary"]:hover,
 [data-testid="baseButton-primary"]:hover {
-    background: #1558b0 !important;
+    background: #c5dafc !important;
 }
 [data-testid="stBaseButton-primary"] p,
 [data-testid="baseButton-primary"] p,
 [data-testid="stBaseButton-primary"] span,
 [data-testid="baseButton-primary"] span {
-    color: white !important;
+    color: #174ea6 !important;
     font-weight: 600 !important;
 }
 
@@ -115,15 +118,15 @@ html, body, * {
 /* ── 채팅 입력창: Gemini 스타일 큰 카드 ── */
 [data-testid="stBottom"] {
     background: transparent !important;
-    padding: 0 0 12px !important;
+    padding: 0 0 10px !important;
 }
 [data-testid="stChatInput"] > div,
 [data-testid="stChatInputContainer"] {
-    border-radius: 26px !important;
-    border: 1px solid #c8cdd8 !important;
+    border-radius: 24px !important;
+    border: 1px solid #d0d7e2 !important;
     background: #ffffff !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
-    padding: 10px 16px !important;
+    box-shadow: 0 1px 4px rgba(60,64,67,0.3), 0 4px 14px rgba(60,64,67,0.15) !important;
+    padding: 11px 16px !important;
     transition: box-shadow 0.2s !important;
 }
 [data-testid="stChatInput"] > div:focus-within,
@@ -143,8 +146,19 @@ html, body, * {
     font-family: 'Noto Sans KR', sans-serif !important;
 }
 [data-testid="stChatInput"] textarea::placeholder {
-    color: #9aa0b0 !important;
+    color: #80868b !important;
 }
+
+.gemini-topbar {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 2px 8px 2px;
+}
+.gemini-brand {
+    display:flex;align-items:center;gap:10px;color:#3c4043;
+    font-size:1.2rem;font-weight:500;letter-spacing:-0.2px;
+}
+.gemini-menu { color:#5f6368;font-size:1rem;padding:4px 6px;border-radius:999px; }
+.gemini-right { display:flex;align-items:center;gap:8px; }
 
 /* ── 구분선 ── */
 hr { margin-top: 0.2rem !important; margin-bottom: 0.8rem !important; opacity: 0.25 !important; }
@@ -195,10 +209,10 @@ _in_chat_now = st.session_state.get("in_chat", False)
 _hcol_title, _hcol_btn = st.columns([8, 2])
 with _hcol_title:
     st.markdown(
-        f"<div style='display:flex;align-items:center;gap:10px;padding:10px 0 6px'>"
-        f"{_logo_sm}"
-        f"<span style='font-size:1.1rem;font-weight:700;color:#1a1a2e;letter-spacing:-0.3px;'"
-        f">원당역 롯데캐슬스카이엘</span></div>",
+        f"<div class='gemini-topbar'>"
+        f"<div class='gemini-brand'><span class='gemini-menu'>☰</span><span>Gemini</span></div>"
+        f"<div class='gemini-right'>{_logo_sm}</div>"
+        f"</div>",
         unsafe_allow_html=True,
     )
 with _hcol_btn:
@@ -1067,12 +1081,12 @@ _in_chat  = st.session_state.get("in_chat", False)
 if not _in_chat:
     # ── 홈 화면: Gemini 스타일 좌측 인사말 + 세로 칩 ──
     st.markdown(
-        "<div style='padding:2.2rem 0 1.8rem'>"
-        "<p style='font-size:0.95rem;color:#5f6b7a;margin:0 0 0.4rem;font-weight:400'>"
+        "<div style='padding:2.7rem 0 1.8rem'>"
+        "<p style='font-size:0.95rem;color:#5f6368;margin:0 0 0.45rem;font-weight:400'>"
         "입주민님, 안녕하세요</p>"
-        "<p style='font-size:1.85rem;font-weight:700;color:#1a1a2e;line-height:1.3;"
-        "letter-spacing:-0.5px;margin:0'>"
-        "규약 검색, AI 질문으로<br>무엇이든 도와드리겠습니다.</p>"
+        "<p style='font-size:2.8rem;font-weight:500;color:#202124;line-height:1.14;"
+        "letter-spacing:-1.1px;margin:0'>"
+        "계획, 학습, 아이디어 실현<br>등 다양한 작업을 도와드리겠습니다.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
