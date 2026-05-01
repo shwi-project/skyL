@@ -258,7 +258,13 @@ hr { display: none !important; }
 }
 .st-key-sky_mode_bar {
     width: min(680px, calc(100vw - 48px));
-    margin: 0 auto 8px;
+    position: fixed;
+    left: 50%;
+    bottom: 142px;
+    transform: translateX(-50%);
+    z-index: 999991;
+    margin: 0;
+    background: transparent !important;
 }
 .st-key-sky_mode_bar [data-testid="stElementToolbar"] {
     display: none !important;
@@ -353,6 +359,7 @@ hr { display: none !important; }
     }
     .st-key-sky_mode_bar {
         width: min(680px, calc(100vw - 36px));
+        bottom: 142px;
     }
     .st-key-sky_mode_bar [data-testid="stButtonGroup"] {
         justify-content: center !important;
