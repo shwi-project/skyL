@@ -1450,12 +1450,8 @@ else:
                 for i in range(0, len(_msgs) - 1, 2)
                 if i + 1 < len(_msgs)
             ]
-            _scroll_latest = st.session_state.pop("scroll_to_latest_ai", False)
-            for _idx, (_user_m, _asst_m) in enumerate(reversed(_pairs)):
-                _anchor_id = "sky-latest-question" if (_scroll_latest and _idx == 0) else ""
-                _user_bubble(_user_m["text"], anchor_id=_anchor_id)
-                if _anchor_id:
-                    _scroll_to_anchor(_anchor_id)
+            for _user_m, _asst_m in reversed(_pairs):
+                _user_bubble(_user_m["text"])
                 with st.chat_message("assistant"):
                     _render_assistant_message(_asst_m)
         else:
@@ -1551,7 +1547,8 @@ if _prompt := st.chat_input(_ph):
             st.session_state.messages_by_doc[_selected] = []
         _msgs = st.session_state.messages_by_doc[_selected]
 
-        _user_bubble(_prompt)
+        _user_bubble(_prompt, anchor_id="sky-current-question")
+        _scroll_to_anchor("sky-current-question")
         _response_text = None
         _related: list[dict] = []
         _last_err = ""
@@ -1611,10 +1608,8 @@ if _prompt := st.chat_input(_ph):
         if _response_text:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
-            st.session_state.scroll_to_latest_ai = True
         elif _last_err:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
-            st.session_state.scroll_to_latest_ai = True
 
         st.rerun()
