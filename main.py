@@ -1443,13 +1443,71 @@ else:
         if _selected not in st.session_state.messages_by_doc:
             st.session_state.messages_by_doc[_selected] = []
         _msgs: list[dict] = st.session_state.messages_by_doc[_selected]
+        _pending_ai = st.session_state.get("pending_ai_prompt", {})
+        _pending_prompt = (
+            _pending_ai.get("text", "")
+            if _pending_ai.get("doc") == _selected
+            else ""
+        )
 
-        if _msgs:
+        if _msgs or _pending_prompt:
             _pairs = [
                 (_msgs[i], _msgs[i + 1])
                 for i in range(0, len(_msgs) - 1, 2)
                 if i + 1 < len(_msgs)
             ]
+            if _pending_prompt:
+                _user_bubble(_pending_prompt, anchor_id="sky-current-question")
+                _scroll_to_anchor("sky-current-question")
+
+                _response_text = None
+                _related: list[dict] = []
+                _last_err = ""
+                with st.chat_message("assistant"):
+                    _ph_el = st.empty()
+                    _ph_el.markdown("_답변을 생성하는 중입니다..._")
+                    try:
+                        _all_arts = get_articles(_selected, pdf_texts[_selected])
+                        _context  = get_context_for_ai(_selected, _pending_prompt, _all_arts)
+                        _full_p   = build_prompt(_selected, _context, _pending_prompt)
+                        _cache_key = (_selected, _pending_prompt.strip())
+                        _entry = _RESPONSE_CACHE.get(_cache_key)
+                        _cached = _entry[0] if (_entry and time.time() - _entry[1] < _CACHE_TTL) else None
+
+                        if _cached is not None:
+                            _response_text = _cached
+                        else:
+                            _accumulated = ""
+                            for _chunk in ai_generate_smart_stream(_full_p):
+                                _accumulated += _chunk
+                                _ph_el.markdown(_accumulated + " ▌")
+                            if not _accumulated.strip():
+                                raise RuntimeError("빈 응답")
+                            _response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", _accumulated)
+                            _response_text = _collapse_citations(_response_text)
+                            _RESPONSE_CACHE[_cache_key] = (_response_text, time.time())
+
+                        _body, _cites = split_body_and_citations(_response_text)
+                        _final = "\n".join(_body).rstrip()
+                        if _cites:
+                            _final += "\n\n" + "\n".join(_cites)
+                        _ph_el.markdown(_final)
+
+                        _related = [] if _selected == "생활안내" else find_related_articles(
+                            _response_text, _all_arts, _selected
+                        )
+                    except Exception as _e:
+                        _last_err = friendly_error_message(_e)
+                        _ph_el.markdown(_last_err)
+
+                if _response_text:
+                    _msgs.append({"role": "user", "text": _pending_prompt})
+                    _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
+                elif _last_err:
+                    _msgs.append({"role": "user", "text": _pending_prompt})
+                    _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
+                st.session_state.pop("pending_ai_prompt", None)
+
             for _user_m, _asst_m in reversed(_pairs):
                 _user_bubble(_user_m["text"])
                 with st.chat_message("assistant"):
@@ -1541,75 +1599,5 @@ if _prompt := st.chat_input(_ph):
             st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
             st.stop()
 
-        if "messages_by_doc" not in st.session_state:
-            st.session_state.messages_by_doc = {}
-        if _selected not in st.session_state.messages_by_doc:
-            st.session_state.messages_by_doc[_selected] = []
-        _msgs = st.session_state.messages_by_doc[_selected]
-
-        _user_bubble(_prompt, anchor_id="sky-current-question")
-        _scroll_to_anchor("sky-current-question")
-        _response_text = None
-        _related: list[dict] = []
-        _last_err = ""
-
-        _asst_container = st.container()
-        _hist_container = st.container()
-
-        _old_pairs = [
-            (_msgs[i], _msgs[i + 1])
-            for i in range(0, len(_msgs) - 1, 2)
-            if i + 1 < len(_msgs)
-        ]
-        with _hist_container:
-            for _um, _am in reversed(_old_pairs):
-                _user_bubble(_um["text"])
-                with st.chat_message("assistant"):
-                    _render_assistant_message(_am)
-
-        with _asst_container:
-            with st.chat_message("assistant"):
-                _ph_el = st.empty()
-                _ph_el.markdown("_답변을 생성하는 중입니다..._")
-                try:
-                    _all_arts = get_articles(_selected, pdf_texts[_selected])
-                    _context  = get_context_for_ai(_selected, _prompt, _all_arts)
-                    _full_p   = build_prompt(_selected, _context, _prompt)
-                    _cache_key = (_selected, _prompt.strip())
-                    _entry = _RESPONSE_CACHE.get(_cache_key)
-                    _cached = _entry[0] if (_entry and time.time() - _entry[1] < _CACHE_TTL) else None
-
-                    if _cached is not None:
-                        _response_text = _cached
-                    else:
-                        _accumulated = ""
-                        for _chunk in ai_generate_smart_stream(_full_p):
-                            _accumulated += _chunk
-                            _ph_el.markdown(_accumulated + " ▌")
-                        if not _accumulated.strip():
-                            raise RuntimeError("빈 응답")
-                        _response_text = re.sub(r"([^\n])\n*(📌)", r"\1\n\n\2", _accumulated)
-                        _response_text = _collapse_citations(_response_text)
-                        _RESPONSE_CACHE[_cache_key] = (_response_text, time.time())
-
-                    _body, _cites = split_body_and_citations(_response_text)
-                    _final = "\n".join(_body).rstrip()
-                    if _cites:
-                        _final += "\n\n" + "\n".join(_cites)
-                    _ph_el.markdown(_final)
-
-                    _related = [] if _selected == "생활안내" else find_related_articles(
-                        _response_text, _all_arts, _selected
-                    )
-                except Exception as _e:
-                    _last_err = friendly_error_message(_e)
-                    _ph_el.markdown(_last_err)
-
-        if _response_text:
-            _msgs.append({"role": "user", "text": _prompt})
-            _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
-        elif _last_err:
-            _msgs.append({"role": "user", "text": _prompt})
-            _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
-
+        st.session_state.pending_ai_prompt = {"doc": _selected, "text": _prompt}
         st.rerun()
