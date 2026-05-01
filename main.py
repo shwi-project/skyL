@@ -206,8 +206,12 @@ st.markdown("""
 .main .block-container,
 [data-testid="stMainBlockContainer"] {
     max-width: 780px !important;
-    padding-top: 0.1rem !important;
+    padding-top: 0 !important;
     padding-bottom: 8rem !important;
+}
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stVerticalBlock"] {
+    padding-top: 0 !important;
 }
 html, body, * {
     font-family: Pretendard, 'Noto Sans KR', sans-serif !important;
@@ -219,7 +223,7 @@ hr { display: none !important; }
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    padding: 2px 0 6px;
+    padding: 0 !important;
     color: #32281b !important;
     text-decoration: none !important;
 }
@@ -236,7 +240,7 @@ hr { display: none !important; }
     line-height: 1.1;
 }
 .sky-home {
-    padding: 2.4rem 0 1.2rem;
+    padding: 1.35rem 0 1.2rem !important;
 }
 .sky-hello {
     margin: 0 0 0.52rem;
@@ -245,11 +249,18 @@ hr { display: none !important; }
     font-weight: 500;
 }
 .sky-question {
-    margin: 0;
-    color: #2e251a;
-    font-size: clamp(2.2rem, 7vw, 3.15rem);
-    font-weight: 650;
-    line-height: 1.15;
+    margin: 0 !important;
+    color: #2e251a !important;
+    font-size: clamp(2.35rem, 7.2vw, 3.7rem) !important;
+    font-weight: 720 !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+}
+.sky-source-title {
+    margin: 1.1rem 0 0.55rem;
+    color: #5c4933;
+    font-size: 0.94rem;
+    font-weight: 700;
 }
 
 [data-testid="stBottom"] {
@@ -1303,9 +1314,9 @@ def _render_assistant_message(m: dict) -> None:
         st.markdown("")
         st.markdown("\n".join(cites))
     if m.get("articles"):
-        with st.expander("📋 관련 내용 원문 보기", expanded=False):
-            for art in m["articles"]:
-                render_article_card(art)
+        st.markdown("<div class='sky-source-title'>관련 내용 원문</div>", unsafe_allow_html=True)
+        for art in m["articles"]:
+            render_article_card(art)
 
 # ─────────────────────────────────────────
 # 11. 홈 화면 vs 대화 화면
@@ -1318,7 +1329,7 @@ if not _in_chat:
     st.markdown(
         "<div class='sky-home'>"
         "<p class='sky-hello'>입주민님, 안녕하세요</p>"
-        "<p class='sky-question'>무엇을<br>도와드릴까요?</p>"
+        "<p class='sky-question'>무엇을 도와드릴까요?</p>"
         "</div>",
         unsafe_allow_html=True,
     )
