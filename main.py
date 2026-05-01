@@ -1496,6 +1496,8 @@ else:
                         _related = [] if _selected == "생활안내" else find_related_articles(
                             _response_text, _all_arts, _selected
                         )
+                        if _related:
+                            render_related_articles_details(_related)
                     except Exception as _e:
                         _last_err = friendly_error_message(_e)
                         _ph_el.markdown(_last_err)
