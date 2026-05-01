@@ -365,6 +365,78 @@ hr { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* Streamlit Cloud/브라우저 다크 테마가 섞여 들어와도 화면은 하나의 라이트 톤으로 고정 */
+html,
+body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+section[data-testid="stMain"],
+[data-testid="stMainBlockContainer"] {
+    background: #f7f2e8 !important;
+    color: #2e251a !important;
+}
+
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottomBlockContainer"],
+[data-testid="stBottomBlockContainer"] > div {
+    background: linear-gradient(180deg, rgba(247,242,232,0), #f7f2e8 26%) !important;
+}
+
+[data-testid="stBottom"] [data-testid="stChatInput"] > div,
+[data-testid="stBottom"] [data-testid="stChatInputContainer"],
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"],
+[data-baseweb="textarea"],
+[data-baseweb="textarea"] > div {
+    background: #fffdfa !important;
+    color: #2d2419 !important;
+}
+
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInput"] textarea:focus,
+[data-testid="stChatInput"] textarea:active {
+    background: transparent !important;
+    color: #2d2419 !important;
+    caret-color: #5c4933 !important;
+}
+
+[data-testid="stChatInput"] button {
+    background: #eee8dd !important;
+    color: #5c4933 !important;
+}
+[data-testid="stChatInput"] button:enabled {
+    background: #5c4933 !important;
+    color: #fff8ed !important;
+}
+
+[data-testid="stChatMessage"] {
+    background: #fffdf8 !important;
+    border: 1px solid rgba(104,82,51,0.14) !important;
+    color: #2d2419 !important;
+    box-shadow: 0 4px 14px rgba(67,49,27,0.07) !important;
+}
+[data-testid="stChatMessage"] *,
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] strong,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
+    color: #2d2419 !important;
+}
+[data-testid="stExpander"] {
+    background: #fffaf1 !important;
+    border: 1px solid rgba(104,82,51,0.16) !important;
+    color: #2d2419 !important;
+}
+[data-testid="stExpander"] * {
+    color: #2d2419 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 if st.query_params.get("home") == "1":
     for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
         st.session_state.pop(_k, None)
