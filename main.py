@@ -223,7 +223,7 @@ hr { display: none !important; }
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    margin-top: -3.05rem !important;
+    margin-top: -4.05rem !important;
     padding: 0 !important;
     color: #32281b !important;
     text-decoration: none !important;
@@ -1236,6 +1236,66 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
   </div>
 </div>""")
 
+
+def render_related_articles_details(articles: list[dict]) -> None:
+    cards = []
+    for art in articles:
+        lc = DOC_COLORS.get(art["doc"], "#555")
+        display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
+        cards.append(f"""
+<div class='rel-card'>
+  <div style='width:5px;flex-shrink:0;background:{lc}'></div>
+  <div class='rel-inner'>
+    <div>
+      <span class='rel-doc' style='color:{lc}'>{art["doc"]}</span>
+      <span class='rel-title'>{display_title}</span>
+    </div>
+    <div class='rel-body'>{_smart_linebreak(art["content"])}</div>
+  </div>
+</div>""")
+    st.html(f"""
+<style>
+  body {{ margin:0; }}
+  details.rel-details {{
+    margin-top: 14px;
+    border: 1px solid rgba(104,82,51,0.16);
+    border-radius: 12px;
+    background: #fffaf1;
+    font-family: Pretendard,'Noto Sans KR',sans-serif;
+    overflow: hidden;
+  }}
+  details.rel-details > summary {{
+    cursor: pointer;
+    list-style: none;
+    padding: 12px 14px;
+    color: #5c4933;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }}
+  details.rel-details > summary::-webkit-details-marker {{ display: none; }}
+  details.rel-details > summary::after {{
+    content: '+';
+    float: right;
+    font-weight: 700;
+    color: #8a7359;
+  }}
+  details.rel-details[open] > summary::after {{ content: '-'; }}
+  .rel-content {{ padding: 0 12px 12px; }}
+  .rel-card {{ display:flex; background:#fffdf8; border:1px solid rgba(104,82,51,0.14);
+           border-radius:12px; margin-bottom:6px; overflow:hidden;
+           box-shadow:0 4px 14px rgba(67,49,27,0.07); }}
+  .rel-inner {{ flex:1; padding:14px 18px 14px 14px; }}
+  .rel-doc {{ font-size:0.72rem; font-weight:700; }}
+  .rel-title {{ font-size:0.95rem; font-weight:700; color:#2d2419; margin-left:8px; }}
+  .rel-body {{ font-size:0.86rem; color:#574936; line-height:1.85; margin-top:9px; }}
+</style>
+<details class='rel-details'>
+  <summary>관련 내용 원문 보기</summary>
+  <div class='rel-content'>
+    {''.join(cards)}
+  </div>
+</details>""")
+
 # ─────────────────────────────────────────
 # 10-a. 키워드 검색 실행
 # ─────────────────────────────────────────
@@ -1315,9 +1375,7 @@ def _render_assistant_message(m: dict) -> None:
         st.markdown("")
         st.markdown("\n".join(cites))
     if m.get("articles"):
-        st.markdown("<div class='sky-source-title'>관련 내용 원문</div>", unsafe_allow_html=True)
-        for art in m["articles"]:
-            render_article_card(art)
+        render_related_articles_details(m["articles"])
 
 # ─────────────────────────────────────────
 # 11. 홈 화면 vs 대화 화면
