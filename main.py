@@ -12,7 +12,6 @@ _CACHE_TTL = 3600
 import pdfplumber
 import requests
 import streamlit as st
-import streamlit.components.v1 as components
 
 # ─────────────────────────────────────────
 # 페이지 설정
@@ -224,7 +223,7 @@ hr { display: none !important; }
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    margin-top: -2.15rem !important;
+    margin-top: -3.05rem !important;
     padding: 0 !important;
     color: #32281b !important;
     text-decoration: none !important;
@@ -1297,10 +1296,9 @@ def build_prompt(doc_name: str, context: str, question: str) -> str:
             "근거 없이 답변을 끝내지 마시오."
         )
 
-def _user_bubble(text: str, anchor: bool = False) -> None:
-    anchor_attr = " id='sky-latest-question'" if anchor else ""
+def _user_bubble(text: str) -> None:
     st.markdown(
-        f'<div{anchor_attr} style="display:flex;justify-content:flex-end;margin:4px 0 8px 0;scroll-margin-top:18px">'
+        f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
         f'<div style="background:#4f68e8;color:#fff;border-radius:16px 16px 4px 16px;'
         f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
         f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
@@ -1317,10 +1315,9 @@ def _render_assistant_message(m: dict) -> None:
         st.markdown("")
         st.markdown("\n".join(cites))
     if m.get("articles"):
-        with st.popover("관련 내용 원문 보기"):
-            st.markdown("<div class='sky-source-title'>관련 내용 원문</div>", unsafe_allow_html=True)
-            for art in m["articles"]:
-                render_article_card(art)
+        st.markdown("<div class='sky-source-title'>관련 내용 원문</div>", unsafe_allow_html=True)
+        for art in m["articles"]:
+            render_article_card(art)
 
 # ─────────────────────────────────────────
 # 11. 홈 화면 vs 대화 화면
@@ -1369,22 +1366,8 @@ else:
                 for i in range(0, len(_msgs) - 1, 2)
                 if i + 1 < len(_msgs)
             ]
-            _scroll_latest = st.session_state.pop("scroll_to_latest_ai", False)
-            for _idx, (_user_m, _asst_m) in enumerate(reversed(_pairs)):
-                _is_latest = _scroll_latest and _idx == 0
-                _user_bubble(_user_m["text"], anchor=_is_latest)
-                if _is_latest:
-                    components.html(
-                        """
-                        <script>
-                        setTimeout(() => {
-                          const el = window.parent.document.getElementById("sky-latest-question");
-                          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }, 250);
-                        </script>
-                        """,
-                        height=0,
-                    )
+            for _user_m, _asst_m in reversed(_pairs):
+                _user_bubble(_user_m["text"])
                 with st.chat_message("assistant"):
                     _render_assistant_message(_asst_m)
         else:
@@ -1539,10 +1522,8 @@ if _prompt := st.chat_input(_ph):
         if _response_text:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
-            st.session_state.scroll_to_latest_ai = True
         elif _last_err:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
-            st.session_state.scroll_to_latest_ai = True
 
         st.rerun()
