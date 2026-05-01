@@ -12,6 +12,7 @@ _CACHE_TTL = 3600
 import pdfplumber
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ─────────────────────────────────────────
 # 페이지 설정
@@ -256,6 +257,12 @@ hr { display: none !important; }
     font-weight: 720 !important;
     line-height: 1.05 !important;
     white-space: nowrap !important;
+}
+.sky-guide {
+    margin: 0.7rem 0 0 !important;
+    color: rgba(92, 73, 51, 0.56) !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
 }
 .sky-source-title {
     margin: 1.1rem 0 0.55rem;
@@ -1356,9 +1363,24 @@ def build_prompt(doc_name: str, context: str, question: str) -> str:
             "근거 없이 답변을 끝내지 마시오."
         )
 
-def _user_bubble(text: str) -> None:
+def _scroll_to_anchor(anchor_id: str) -> None:
+    components.html(
+        f"""
+        <script>
+        setTimeout(() => {{
+          const el = window.parent.document.getElementById("{anchor_id}");
+          if (el) el.scrollIntoView({{ behavior: "smooth", block: "start" }});
+        }}, 220);
+        </script>
+        """,
+        height=0,
+    )
+
+
+def _user_bubble(text: str, anchor_id: str = "") -> None:
+    anchor_attr = f' id="{anchor_id}"' if anchor_id else ""
     st.markdown(
-        f'<div style="display:flex;justify-content:flex-end;margin:4px 0 8px 0">'
+        f'<div{anchor_attr} style="display:flex;justify-content:flex-end;margin:4px 0 8px 0;scroll-margin-top:18px">'
         f'<div style="background:#4f68e8;color:#fff;border-radius:16px 16px 4px 16px;'
         f'padding:10px 16px;max-width:78%;font-size:0.87rem;line-height:1.6;'
         f'word-break:break-word;font-family:\'Noto Sans KR\',sans-serif">{text}</div></div>',
@@ -1389,6 +1411,7 @@ if not _in_chat:
         "<div class='sky-home'>"
         "<p class='sky-hello'>입주민님, 안녕하세요</p>"
         "<p class='sky-question'>무엇을 도와드릴까요?</p>"
+        "<p class='sky-guide'>아래 버튼을 눌러 규약을 검색할 수 있습니다.</p>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -1400,6 +1423,9 @@ else:
         _kw_query   = st.session_state.get("keyword_query", "")
         _kw_terms   = st.session_state.get("keyword_terms", [])
         if _kw_results:
+            st.markdown("<div id='sky-search-result' style='scroll-margin-top:18px'></div>", unsafe_allow_html=True)
+            if st.session_state.pop("scroll_to_search_result", False):
+                _scroll_to_anchor("sky-search-result")
             st.markdown(
                 f"<div class='sky-result-summary'><b>{_kw_query}</b> 검색 결과 "
                 f"<b>{len(_kw_results)}개</b> 조항을 찾았습니다.</div>",
@@ -1424,8 +1450,12 @@ else:
                 for i in range(0, len(_msgs) - 1, 2)
                 if i + 1 < len(_msgs)
             ]
-            for _user_m, _asst_m in reversed(_pairs):
-                _user_bubble(_user_m["text"])
+            _scroll_latest = st.session_state.pop("scroll_to_latest_ai", False)
+            for _idx, (_user_m, _asst_m) in enumerate(reversed(_pairs)):
+                _anchor_id = "sky-latest-question" if (_scroll_latest and _idx == 0) else ""
+                _user_bubble(_user_m["text"], anchor_id=_anchor_id)
+                if _anchor_id:
+                    _scroll_to_anchor(_anchor_id)
                 with st.chat_message("assistant"):
                     _render_assistant_message(_asst_m)
         else:
@@ -1507,6 +1537,7 @@ if _prompt := st.chat_input(_ph):
         st.session_state.keyword_results = _results
         st.session_state.keyword_query   = _prompt
         st.session_state.keyword_terms   = _terms
+        st.session_state.scroll_to_search_result = True
         st.rerun()
 
     else:
@@ -1580,8 +1611,10 @@ if _prompt := st.chat_input(_ph):
         if _response_text:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _response_text, "articles": _related})
+            st.session_state.scroll_to_latest_ai = True
         elif _last_err:
             _msgs.append({"role": "user", "text": _prompt})
             _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
+            st.session_state.scroll_to_latest_ai = True
 
         st.rerun()
