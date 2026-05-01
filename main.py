@@ -1456,6 +1456,11 @@ else:
                 for i in range(0, len(_msgs) - 1, 2)
                 if i + 1 < len(_msgs)
             ]
+            for _user_m, _asst_m in _pairs:
+                _user_bubble(_user_m["text"])
+                with st.chat_message("assistant"):
+                    _render_assistant_message(_asst_m)
+
             if _pending_prompt:
                 _user_bubble(_pending_prompt, anchor_id="sky-current-question")
                 _scroll_to_anchor("sky-current-question")
@@ -1509,11 +1514,6 @@ else:
                     _msgs.append({"role": "user", "text": _pending_prompt})
                     _msgs.append({"role": "assistant", "text": _last_err, "articles": [], "error": True})
                 st.session_state.pop("pending_ai_prompt", None)
-
-            for _user_m, _asst_m in reversed(_pairs):
-                _user_bubble(_user_m["text"])
-                with st.chat_message("assistant"):
-                    _render_assistant_message(_asst_m)
         else:
             st.markdown(
                 f"<div style='text-align:center;color:#aaa;padding:2.5rem 0'>"
