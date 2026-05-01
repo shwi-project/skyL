@@ -193,35 +193,202 @@ header { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── 헤더: 순수 HTML로 렌더 (Gemini 스타일 nav) ──
+st.markdown("""
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+:root {
+    color-scheme: light;
+}
+.stApp, [data-testid="stAppViewContainer"], section[data-testid="stMain"] {
+    background: #f7f2e8 !important;
+}
+.main .block-container,
+[data-testid="stMainBlockContainer"] {
+    max-width: 780px !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 8rem !important;
+}
+html, body, * {
+    font-family: Pretendard, 'Noto Sans KR', sans-serif !important;
+    letter-spacing: 0 !important;
+}
+hr { display: none !important; }
+
+.sky-topbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 0 6px;
+    color: #32281b !important;
+    text-decoration: none !important;
+}
+.sky-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    display: block;
+}
+.sky-brand-title {
+    font-size: 1.23rem;
+    font-weight: 700;
+    color: #34291d;
+    line-height: 1.1;
+}
+.sky-home {
+    padding: 2.4rem 0 1.2rem;
+}
+.sky-hello {
+    margin: 0 0 0.52rem;
+    color: #8a7359;
+    font-size: 1.02rem;
+    font-weight: 500;
+}
+.sky-question {
+    margin: 0;
+    color: #2e251a;
+    font-size: clamp(2.2rem, 7vw, 3.15rem);
+    font-weight: 650;
+    line-height: 1.15;
+}
+
+[data-testid="stBottom"] {
+    background: linear-gradient(180deg, rgba(247,242,232,0), #f7f2e8 22%) !important;
+    padding: 10px 0 14px !important;
+}
+.st-key-sky_mode_bar {
+    width: min(680px, calc(100vw - 48px));
+    margin: 0 auto 8px;
+}
+.st-key-sky_mode_bar [data-testid="stElementToolbar"] {
+    display: none !important;
+}
+.st-key-sky_mode_bar [data-testid="stButtonGroup"] {
+    display: flex !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+}
+.st-key-sky_mode_bar button {
+    border-radius: 999px !important;
+    min-height: 30px !important;
+    padding: 0.34rem 0.68rem !important;
+    border: 1px solid rgba(104, 82, 51, 0.18) !important;
+    background: rgba(255,255,255,0.56) !important;
+    color: #8f7c67 !important;
+    box-shadow: none !important;
+}
+.st-key-sky_mode_bar button p,
+.st-key-sky_mode_bar button span {
+    font-size: 0.78rem !important;
+    font-weight: 520 !important;
+    color: inherit !important;
+}
+.st-key-sky_mode_bar button[kind="pillsActive"],
+.st-key-sky_mode_bar button[aria-pressed="true"] {
+    background: #5c4933 !important;
+    border-color: #5c4933 !important;
+    color: #fff8ed !important;
+}
+
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] {
+    width: min(680px, calc(100vw - 48px)) !important;
+    margin: 0 auto !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(109, 84, 50, 0.20) !important;
+    background: rgba(255,255,255,0.92) !important;
+    box-shadow: 0 8px 28px rgba(67, 49, 27, 0.13), 0 1px 2px rgba(67, 49, 27, 0.08) !important;
+    padding: 12px 48px 12px 16px !important;
+    position: relative !important;
+}
+[data-testid="stChatInput"] textarea {
+    min-height: 32px !important;
+    height: 32px !important;
+    max-height: 32px !important;
+    overflow-y: auto !important;
+    resize: none !important;
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+    color: #2d2419 !important;
+    padding: 5px 0 !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+    color: rgba(72, 58, 41, 0.38) !important;
+    font-size: 0.8rem !important;
+}
+[data-testid="stChatInput"] textarea:focus::placeholder {
+    color: transparent !important;
+}
+[data-testid="stChatInput"] button {
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.sky-result-summary {
+    margin: 0 0 0.7rem;
+    padding: 0.74rem 0.9rem;
+    border: 1px solid rgba(104, 82, 51, 0.14);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.58);
+    color: #4f3d29;
+    font-size: 0.92rem;
+}
+.sky-empty {
+    text-align: center;
+    color: #8b7a65;
+    padding: 2.5rem 0;
+    font-size: 0.92rem;
+}
+
+@media (max-width: 640px) {
+    .main .block-container,
+    [data-testid="stMainBlockContainer"] {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+    }
+    .st-key-sky_mode_bar {
+        width: min(680px, calc(100vw - 36px));
+    }
+    .st-key-sky_mode_bar [data-testid="stButtonGroup"] {
+        justify-content: center !important;
+    }
+    [data-testid="stChatInput"] > div,
+    [data-testid="stChatInputContainer"] {
+        width: min(680px, calc(100vw - 36px)) !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+if st.query_params.get("home") == "1":
+    for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
+        st.session_state.pop(_k, None)
+    st.session_state.search_mode = "keyword"
+    st.query_params.clear()
+    st.rerun()
+
+# ── 헤더: 로고/텍스트 클릭 시 홈으로 이동 ──
 try:
     with open("logo.png", "rb") as f:
         _logo_b64 = base64.b64encode(f.read()).decode()
     _logo_sm = (
         f"<img src='data:image/png;base64,{_logo_b64}' "
-        "style='width:28px;height:28px;object-fit:contain;vertical-align:middle;'>"
+        "class='sky-logo'>"
     )
 except Exception:
-    _logo_sm = "<span style='font-size:1.3rem;vertical-align:middle'>🏰</span>"
+    _logo_sm = "<span class='sky-logo' style='font-size:1.55rem;line-height:34px'>🏰</span>"
 
-_in_chat_now = st.session_state.get("in_chat", False)
-
-_hcol_title, _hcol_btn = st.columns([8, 2])
-with _hcol_title:
-    st.markdown(
-        f"<div class='gemini-topbar'>"
-        f"<div class='gemini-brand'><span class='gemini-menu'>☰</span><span>Gemini</span></div>"
-        f"<div class='gemini-right'>{_logo_sm}</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-with _hcol_btn:
-    if _in_chat_now:
-        if st.button("← 홈으로", key="home_btn", type="secondary"):
-            for _k in ["in_chat", "keyword_results", "keyword_query", "keyword_terms", "messages_by_doc"]:
-                st.session_state.pop(_k, None)
-            st.session_state.search_mode = "ai"
-            st.rerun()
+st.markdown(
+    f"<a class='sky-topbar' href='?home=1' target='_self'>"
+    f"{_logo_sm}<span class='sky-brand-title'>원당역 롯데캐슬스카이엘</span>"
+    f"</a>",
+    unsafe_allow_html=True,
+)
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -309,7 +476,7 @@ DOC_ORDER = [n for n in ["주차규약", "커뮤니티센터 규약", "관리규
 if "selected_doc" not in st.session_state or st.session_state.selected_doc not in DOC_ORDER:
     st.session_state.selected_doc = DOC_ORDER[0]
 if "search_mode" not in st.session_state:
-    st.session_state.search_mode = "ai"
+    st.session_state.search_mode = "keyword"
 
 # ─────────────────────────────────────────
 # 5. Gemini AI
@@ -910,16 +1077,10 @@ _PARKING_FEE_SUPPLEMENT = """
 # 10. 카드 렌더링
 # ─────────────────────────────────────────
 DOC_COLORS = {
-    "관리규약":         "#1a6ebd",
-    "주차규약":         "#2e8b57",
-    "커뮤니티센터 규약": "#8b4513",
-    "생활안내":         "#7b4f9e",
-}
-DOC_COLORS_DARK = {
-    "관리규약":         "#5b9ef5",
-    "주차규약":         "#3aad6a",
-    "커뮤니티센터 규약": "#d4845a",
-    "생활안내":         "#a87dd4",
+    "관리규약":         "#9a3412",
+    "주차규약":         "#166534",
+    "커뮤니티센터 규약": "#1d4ed8",
+    "생활안내":         "#7c3aed",
 }
 
 def _smart_linebreak(text: str) -> str:
@@ -953,35 +1114,31 @@ def render_article_card(art: dict, keyword: str = "", highlights: list[str] = No
                 content,
             )
     lc = DOC_COLORS.get(art["doc"], "#555")
-    dc = DOC_COLORS_DARK.get(art["doc"], lc)
     display_title = art["title"].split(" > ")[-1] if " > " in art["title"] else art["title"]
     st.html(f"""
 <style>
   body {{ margin:0; }}
-  .card {{ display:flex; background:#ffffff; border:1px solid #e4e6f0;
-           border-radius:10px; margin-bottom:2px; overflow:hidden;
-           box-shadow:0 2px 8px rgba(0,0,0,0.07); font-family:'Noto Sans KR',sans-serif; }}
-  .stripe {{ width:5px; flex-shrink:0; background:{lc}; }}
+  .card {{ display:flex; background:#fffdf8; border:1px solid rgba(104,82,51,0.14);
+           border-radius:12px; margin-bottom:4px; overflow:hidden;
+           box-shadow:0 4px 14px rgba(67,49,27,0.07); font-family:Pretendard,'Noto Sans KR',sans-serif; }}
   .inner {{ flex:1; padding:14px 18px 14px 14px; }}
-  .doc-lbl {{ font-size:0.72rem; font-weight:600; color:{lc}; letter-spacing:.05em; }}
-  .card-title {{ font-size:0.95rem; font-weight:700; color:#1a1a2e; margin-left:8px; }}
-  .card-body {{ font-size:0.86rem; color:#555; line-height:1.85; margin-top:9px; }}
-  .hl {{ background:#fff3cd; border-radius:3px; padding:0 2px; }}
+  .doc-lbl {{ font-size:0.72rem; font-weight:700; }}
+  .card-title {{ font-size:0.95rem; font-weight:700; color:#2d2419; margin-left:8px; }}
+  .card-body {{ font-size:0.86rem; color:#574936; line-height:1.85; margin-top:9px; }}
+  .hl {{ background:#fff0b8; border-radius:3px; padding:0 2px; }}
   @media (prefers-color-scheme: dark) {{
-    .card {{ background:#1c1d28; border-color:#2a2b3a;
-             box-shadow:0 2px 10px rgba(0,0,0,0.35); }}
-    .stripe {{ background:{dc}; }}
-    .doc-lbl {{ color:{dc}; }}
-    .card-title {{ color:#d8daf0; }}
-    .card-body {{ color:#8890b0; }}
-    .hl {{ background:#2a3520; color:#8fd060; }}
+    .card {{ background:#fffdf8; border-color:rgba(104,82,51,0.14);
+             box-shadow:0 4px 14px rgba(67,49,27,0.07); }}
+    .card-title {{ color:#2d2419; }}
+    .card-body {{ color:#574936; }}
+    .hl {{ background:#fff0b8; color:#2d2419; }}
   }}
 </style>
 <div class='card'>
-  <div class='stripe'></div>
+  <div style='width:5px;flex-shrink:0;background:{lc}'></div>
   <div class='inner'>
     <div>
-      <span class='doc-lbl'>{art["doc"]}</span>
+      <span class='doc-lbl' style='color:{lc}'>{art["doc"]}</span>
       <span class='card-title'>{display_title}</span>
     </div>
     <div class='card-body'>{_smart_linebreak(content)}</div>
@@ -1079,49 +1236,13 @@ _selected = st.session_state.selected_doc
 _in_chat  = st.session_state.get("in_chat", False)
 
 if not _in_chat:
-    # ── 홈 화면: Gemini 스타일 좌측 인사말 + 세로 칩 ──
     st.markdown(
-        "<div style='padding:2.7rem 0 1.8rem'>"
-        "<p style='font-size:0.95rem;color:#5f6368;margin:0 0 0.45rem;font-weight:400'>"
-        "입주민님, 안녕하세요</p>"
-        "<p style='font-size:2.8rem;font-weight:500;color:#202124;line-height:1.14;"
-        "letter-spacing:-1.1px;margin:0'>"
-        "계획, 학습, 아이디어 실현<br>등 다양한 작업을 도와드리겠습니다.</p>"
+        "<div class='sky-home'>"
+        "<p class='sky-hello'>입주민님, 안녕하세요</p>"
+        "<p class='sky-question'>무엇을<br>도와드릴까요?</p>"
         "</div>",
         unsafe_allow_html=True,
     )
-
-    # 칩 목록 (Gemini 스타일: 세로 단일 컬럼, 좌측 정렬, 아이콘 포함)
-    _chips = [
-        ("🔎  키워드 통합검색",   "chip_kw",           "keyword", None),
-        ("🚗  주차 규약",         "chip_주차규약",      "ai",      "주차규약"),
-        ("🏢  커뮤니티센터 규약", "chip_커뮤니티센터 규약", "ai", "커뮤니티센터 규약"),
-        ("📋  관리 규약",         "chip_관리규약",      "ai",      "관리규약"),
-        ("📌  생활안내",          "chip_생활안내",      "ai",      "생활안내"),
-    ]
-    _chip_col, _ = st.columns([0.62, 0.38])
-    with _chip_col:
-        for _label, _key, _cmode, _cdoc in _chips:
-            if _cdoc and _cdoc not in DOC_ORDER:
-                continue
-            _is_active = (
-                (_cmode == "keyword" and _mode == "keyword")
-                if _cdoc is None
-                else (_mode == "ai" and _selected == _cdoc)
-            )
-            if st.button(
-                _label,
-                key=_key,
-                use_container_width=True,
-                type="primary" if _is_active else "secondary",
-            ):
-                st.session_state.search_mode = _cmode
-                if _cdoc:
-                    st.session_state.selected_doc = _cdoc
-                st.rerun()
-            st.markdown("<div style='margin-bottom:0.35rem'></div>", unsafe_allow_html=True)
-
-    st.markdown("<div style='margin:1rem 0'></div>", unsafe_allow_html=True)
 
 else:
     # ── 대화 화면 ──
@@ -1130,19 +1251,18 @@ else:
         _kw_query   = st.session_state.get("keyword_query", "")
         _kw_terms   = st.session_state.get("keyword_terms", [])
         if _kw_results:
-            st.success(f"**'{_kw_query}'** — 총 **{len(_kw_results)}개** 조항 발견")
-            st.divider()
+            st.markdown(
+                f"<div class='sky-result-summary'><b>{_kw_query}</b> 검색 결과 "
+                f"<b>{len(_kw_results)}개</b> 조항을 찾았습니다.</div>",
+                unsafe_allow_html=True,
+            )
             for _art in _kw_results:
                 render_article_card(_art, highlights=_kw_terms)
         else:
-            st.info("검색 결과가 없습니다. 다른 키워드로 검색해 보세요.")
+            st.markdown("<div class='sky-empty'>검색 결과가 없습니다. 다른 키워드로 검색해 보세요.</div>", unsafe_allow_html=True)
 
     else:
         # AI 대화
-        if not api_ready:
-            st.error("API 키가 설정되지 않아 AI 검색을 사용할 수 없습니다.")
-            st.stop()
-
         if "messages_by_doc" not in st.session_state:
             st.session_state.messages_by_doc = {}
         if _selected not in st.session_state.messages_by_doc:
@@ -1173,39 +1293,62 @@ else:
 _mode     = st.session_state.search_mode
 _selected = st.session_state.selected_doc
 
-# 모드 버튼 행
-_mc1, _mc2, _mc3 = st.columns([1.4, 1.8, 6.8])
-with _mc1:
-    if st.button(
-        "🔎 키워드검색",
-        key="mode_kw",
-        type="primary" if _mode == "keyword" else "secondary",
-    ):
-        st.session_state.search_mode = "keyword"
-        st.rerun()
-with _mc2:
-    with st.popover("✦ AI 검색 ▾"):
-        st.markdown(f"**현재 선택:** {_selected}")
-        st.divider()
-        for _doc in DOC_ORDER:
-            if st.button(
-                _doc,
-                key=f"pop_{_doc}",
-                use_container_width=True,
-                type="primary" if (_doc == _selected and _mode == "ai") else "secondary",
-            ):
-                st.session_state.search_mode = "ai"
-                st.session_state.selected_doc = _doc
-                st.rerun()
+_BADGE_TO_TARGET = {
+    "키워드": ("keyword", None),
+    "주차": ("ai", "주차규약"),
+    "커뮤니티": ("ai", "커뮤니티센터 규약"),
+    "관리": ("ai", "관리규약"),
+    "생활": ("ai", "생활안내"),
+}
+_TARGET_TO_BADGE = {
+    ("keyword", None): "키워드",
+    ("ai", "주차규약"): "주차",
+    ("ai", "커뮤니티센터 규약"): "커뮤니티",
+    ("ai", "관리규약"): "관리",
+    ("ai", "생활안내"): "생활",
+}
+_badge_options = [
+    _badge for _badge, (_bmode, _bdoc) in _BADGE_TO_TARGET.items()
+    if _bdoc is None or _bdoc in DOC_ORDER
+]
+_current_badge = _TARGET_TO_BADGE.get(
+    ("keyword", None) if _mode == "keyword" else ("ai", _selected),
+    "키워드",
+)
+if _current_badge not in _badge_options:
+    _current_badge = "키워드"
+
+with st.container(key="sky_mode_bar"):
+    _next_badge = st.pills(
+        "검색 범위",
+        _badge_options,
+        default=_current_badge,
+        label_visibility="collapsed",
+        key="sky_selected_badge",
+    )
+
+if _next_badge and _next_badge != _current_badge:
+    _next_mode, _next_doc = _BADGE_TO_TARGET[_next_badge]
+    st.session_state.search_mode = _next_mode
+    if _next_doc:
+        st.session_state.selected_doc = _next_doc
+        _has_ai_history = bool(st.session_state.get("messages_by_doc", {}).get(_next_doc))
+        st.session_state.in_chat = _has_ai_history
+    else:
+        st.session_state.in_chat = bool(st.session_state.get("keyword_query"))
+    st.rerun()
+
+_mode     = st.session_state.search_mode
+_selected = st.session_state.selected_doc
 
 # 통합 입력창
 _PLACEHOLDERS = {
-    "주차규약":         "예: 방문차량 무료 주차는 몇 시간까지야?",
-    "커뮤니티센터 규약": "예: 헬스장 이용시간이 어떻게 돼?",
-    "관리규약":         "예: 동대표 자격요건이 뭐야?",
-    "생활안내":         "예: 쓰레기 분리수거는 어떻게 해?",
+    "주차규약":         "방문차량 무료 주차는 몇 시간까지야?",
+    "커뮤니티센터 규약": "헬스장 이용시간이 어떻게 돼?",
+    "관리규약":         "동대표 자격요건이 뭐야?",
+    "생활안내":         "쓰레기 분리수거는 어떻게 해?",
 }
-_ph = "키워드를 입력하세요..." if _mode == "keyword" else _PLACEHOLDERS.get(_selected, "질문을 입력하세요")
+_ph = "키워드 입력 (주차, 헬스장, 키즈카페 등)" if _mode == "keyword" else _PLACEHOLDERS.get(_selected, "질문을 입력하세요")
 
 if _prompt := st.chat_input(_ph):
     st.session_state.in_chat = True
